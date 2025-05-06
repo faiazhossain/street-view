@@ -124,7 +124,7 @@ export async function extractGpsFromDirectory(directoryPath) {
  * @param {string} baseUrl - Base URL for accessing the images
  * @returns {Object} - GeoJSON feature collection
  */
-export function generateGeoJson(gpsData, baseUrl = '/street-view/') {
+export async function generateGeoJson(gpsData, baseUrl = '/street-view/') {
   const features = Object.entries(gpsData).map(([filename, coords], index) => {
     const id = path.basename(filename, path.extname(filename));
 
