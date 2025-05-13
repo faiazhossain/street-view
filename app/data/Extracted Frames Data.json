@@ -1,0 +1,869 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "frame_000000",
+        "imageUrl": "/extracted_frames/frame_000000.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.364294,
+          23.822347
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "frame_000029",
+        "imageUrl": "/extracted_frames/frame_000029.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.364294,
+          23.822339
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "frame_000058",
+        "imageUrl": "/extracted_frames/frame_000058.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.364294,
+          23.822336
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "frame_000087",
+        "imageUrl": "/extracted_frames/frame_000087.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.364297,
+          23.822328
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "frame_000116",
+        "imageUrl": "/extracted_frames/frame_000116.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.364297,
+          23.822317
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "frame_000145",
+        "imageUrl": "/extracted_frames/frame_000145.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.3643,
+          23.822311
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "frame_000174",
+        "imageUrl": "/extracted_frames/frame_000174.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.364294,
+          23.822311
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "frame_000203",
+        "imageUrl": "/extracted_frames/frame_000203.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.364292,
+          23.822306
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "frame_000232",
+        "imageUrl": "/extracted_frames/frame_000232.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.364292,
+          23.822294
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "frame_000261",
+        "imageUrl": "/extracted_frames/frame_000261.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.364306,
+          23.822289
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "frame_000290",
+        "imageUrl": "/extracted_frames/frame_000290.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.364314,
+          23.822281
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "frame_000319",
+        "imageUrl": "/extracted_frames/frame_000319.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.364322,
+          23.822272
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "frame_000348",
+        "imageUrl": "/extracted_frames/frame_000348.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.364325,
+          23.822264
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "frame_000377",
+        "imageUrl": "/extracted_frames/frame_000377.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.364325,
+          23.822253
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "frame_000406",
+        "imageUrl": "/extracted_frames/frame_000406.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.364322,
+          23.822242
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "frame_000435",
+        "imageUrl": "/extracted_frames/frame_000435.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.364322,
+          23.822231
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "frame_000464",
+        "imageUrl": "/extracted_frames/frame_000464.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.364322,
+          23.822219
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "frame_000493",
+        "imageUrl": "/extracted_frames/frame_000493.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.364322,
+          23.822208
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "frame_000522",
+        "imageUrl": "/extracted_frames/frame_000522.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.364325,
+          23.822197
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "frame_000551",
+        "imageUrl": "/extracted_frames/frame_000551.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.364325,
+          23.822189
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "frame_000580",
+        "imageUrl": "/extracted_frames/frame_000580.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.364325,
+          23.822178
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "frame_000609",
+        "imageUrl": "/extracted_frames/frame_000609.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.364328,
+          23.822167
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "frame_000638",
+        "imageUrl": "/extracted_frames/frame_000638.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.364328,
+          23.822156
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "frame_000667",
+        "imageUrl": "/extracted_frames/frame_000667.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.364328,
+          23.822144
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "frame_000696",
+        "imageUrl": "/extracted_frames/frame_000696.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.364331,
+          23.822131
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "frame_000725",
+        "imageUrl": "/extracted_frames/frame_000725.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.364331,
+          23.822119
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "frame_000754",
+        "imageUrl": "/extracted_frames/frame_000754.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.364331,
+          23.822108
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "frame_000783",
+        "imageUrl": "/extracted_frames/frame_000783.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.364331,
+          23.822094
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "frame_000812",
+        "imageUrl": "/extracted_frames/frame_000812.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.364333,
+          23.822081
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "frame_000841",
+        "imageUrl": "/extracted_frames/frame_000841.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.364339,
+          23.822069
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "frame_000870",
+        "imageUrl": "/extracted_frames/frame_000870.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.364342,
+          23.822061
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "frame_000899",
+        "imageUrl": "/extracted_frames/frame_000899.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.364347,
+          23.82205
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "frame_000928",
+        "imageUrl": "/extracted_frames/frame_000928.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.364347,
+          23.822039
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "frame_000957",
+        "imageUrl": "/extracted_frames/frame_000957.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.36435,
+          23.822028
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "frame_000986",
+        "imageUrl": "/extracted_frames/frame_000986.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.364353,
+          23.822014
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "frame_001015",
+        "imageUrl": "/extracted_frames/frame_001015.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.364353,
+          23.822003
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "frame_001044",
+        "imageUrl": "/extracted_frames/frame_001044.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.364358,
+          23.821992
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "frame_001073",
+        "imageUrl": "/extracted_frames/frame_001073.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.364364,
+          23.821981
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "frame_001102",
+        "imageUrl": "/extracted_frames/frame_001102.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.364369,
+          23.821967
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "frame_001131",
+        "imageUrl": "/extracted_frames/frame_001131.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.364372,
+          23.821956
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "frame_001160",
+        "imageUrl": "/extracted_frames/frame_001160.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.364381,
+          23.821942
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "frame_001189",
+        "imageUrl": "/extracted_frames/frame_001189.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.364386,
+          23.821928
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "frame_001218",
+        "imageUrl": "/extracted_frames/frame_001218.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.364389,
+          23.821914
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "frame_001247",
+        "imageUrl": "/extracted_frames/frame_001247.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.364389,
+          23.821903
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "frame_001276",
+        "imageUrl": "/extracted_frames/frame_001276.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.364394,
+          23.821892
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "frame_001305",
+        "imageUrl": "/extracted_frames/frame_001305.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.364392,
+          23.821881
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "frame_001334",
+        "imageUrl": "/extracted_frames/frame_001334.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.364394,
+          23.821869
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "frame_001363",
+        "imageUrl": "/extracted_frames/frame_001363.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          90.364397,
+          23.821858
+        ]
+      }
+    }
+  ]
+}
