@@ -1,5 +1,5 @@
 // This file uses data from Extracted Frames Data.json
-import extractedData from "./images_data.json";
+import extractedData from "./images_Data.json";
 
 export const imageData = {
   type: "FeatureCollection",
