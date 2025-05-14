@@ -3,8 +3,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useKeyboardNavigation } from "../hooks/useKeyboardNavigation";
 import Script from "next/script";
-import { FaChevronCircleDown, FaChevronCircleUp } from "react-icons/fa";
-// Create a ref that persists across component mounts to track script loading
 let scriptLoadedGlobal = false;
 
 const ImageViewer = ({
@@ -92,6 +90,69 @@ const ImageViewer = ({
             viewerRef.current.innerHTML = "";
           }
 
+          // Find the current index in the images array to determine if prev/next buttons should be shown
+          const currentIndex = images.findIndex(
+            (img) => img.properties.id === selectedImage?.properties.id
+          );
+
+          // Create hotspots for navigation
+          const hotSpots = [];
+
+          // Initial yaw from the selected image
+          const initialYaw = selectedImage.properties.initialYaw || 0;
+
+          // Add Next button hotspot if not the last image
+          if (currentIndex < images.length - 1) {
+            hotSpots.push({
+              pitch: 0,
+              yaw: 270, // 270 degrees to the right of initial view
+              type: "custom",
+              cssClass: "custom-hotspot next-hotspot",
+              createTooltipFunc: (hotSpotDiv) => {
+                hotSpotDiv.classList.add("custom-tooltip");
+
+                // Create SVG element for the icon (FaArrowCircleRight)
+                const nextIcon = document.createElement("div");
+                nextIcon.innerHTML = `<svg fill="#fff" height="200px" width="200px" version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 330 330" xml:space="preserve"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path id="XMLID_224_" d="M325.606,229.393l-150.004-150C172.79,76.58,168.974,75,164.996,75c-3.979,0-7.794,1.581-10.607,4.394 l-149.996,150c-5.858,5.858-5.858,15.355,0,21.213c5.857,5.857,15.355,5.858,21.213,0l139.39-139.393l139.397,139.393 C307.322,253.536,311.161,255,315,255c3.839,0,7.678-1.464,10.607-4.394C331.464,244.748,331.464,235.251,325.606,229.393z"></path> </g></svg>`;
+                nextIcon.classList.add("hotspot-icon");
+                hotSpotDiv.appendChild(nextIcon);
+
+                const nextText = document.createElement("span");
+                nextText.innerHTML = "Next";
+                nextText.classList.add("hotspot-text");
+                hotSpotDiv.appendChild(nextText);
+
+                hotSpotDiv.addEventListener("click", onNextImage);
+              },
+            });
+          }
+
+          // Add Previous button hotspot if not the first image
+          if (currentIndex > 0) {
+            hotSpots.push({
+              pitch: 0,
+              yaw: 90, // 90 degrees to the left of initial view
+              type: "custom",
+              cssClass: "custom-hotspot prev-hotspot",
+              createTooltipFunc: (hotSpotDiv) => {
+                hotSpotDiv.classList.add("custom-tooltip");
+
+                // Create SVG element for the icon (FaArrowCircleLeft)
+                const prevIcon = document.createElement("div");
+                prevIcon.innerHTML = `<svg fill="#fff" height="200px" width="200px" version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 330 330" xml:space="preserve"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path id="XMLID_224_" d="M325.606,229.393l-150.004-150C172.79,76.58,168.974,75,164.996,75c-3.979,0-7.794,1.581-10.607,4.394 l-149.996,150c-5.858,5.858-5.858,15.355,0,21.213c5.857,5.857,15.355,5.858,21.213,0l139.39-139.393l139.397,139.393 C307.322,253.536,311.161,255,315,255c3.839,0,7.678-1.464,10.607-4.394C331.464,244.748,331.464,235.251,325.606,229.393z"></path> </g></svg>`;
+                prevIcon.classList.add("hotspot-icon");
+                hotSpotDiv.appendChild(prevIcon);
+
+                const prevText = document.createElement("span");
+                prevText.innerHTML = "Previous";
+                prevText.classList.add("hotspot-text");
+                hotSpotDiv.appendChild(prevText);
+
+                hotSpotDiv.addEventListener("click", onPrevImage);
+              },
+            });
+          }
+
           const viewer = window.pannellum.viewer(viewerRef.current.id, {
             type: "equirectangular",
             panorama: selectedImage.properties.imageUrl,
@@ -109,6 +170,7 @@ const ImageViewer = ({
             showFullscreenCtrl: true,
             showZoomCtrl: true,
             keyboardZoom: true,
+            hotSpots: hotSpots,
             onLoad: () => {
               console.log("Pannellum onLoad callback fired");
               // Clear any safety timeout
@@ -158,7 +220,7 @@ const ImageViewer = ({
       }
       cleanupPannellum();
     };
-  }, [selectedImage, scriptLoaded]);
+  }, [selectedImage, scriptLoaded, images, onNextImage, onPrevImage]);
 
   // Final cleanup on component unmount
   useEffect(() => {
@@ -189,6 +251,66 @@ const ImageViewer = ({
         rel='stylesheet'
         href='https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css'
       />
+
+      {/* Add custom styles for hotspots */}
+      <style jsx global>{`
+        .custom-hotspot {
+          width: 50px;
+          height: 50px;
+          border-radius: 50%;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          background: rgba(0, 0, 0, 0.5);
+          color: white;
+          cursor: pointer;
+          position: absolute;
+          margin-top: 160px;
+        }
+
+        .custom-hotspot:hover {
+          background: rgba(0, 0, 0, 0.8);
+          transform: scale(1.1);
+        }
+
+        .hotspot-icon {
+          font-size: 32px;
+          font-weight: bold;
+        }
+
+        .hotspot-icon svg {
+          width: 32px;
+          height: 32px;
+        }
+
+        .hotspot-text {
+          position: absolute;
+          bottom: -25px;
+          white-space: nowrap;
+          background: rgba(0, 0, 0, 0.7);
+          padding: 3px 6px;
+          border-radius: 4px;
+          opacity: 0;
+          transition: opacity 0.3s;
+        }
+
+        .custom-hotspot:hover .hotspot-text {
+          opacity: 1;
+        }
+
+        /* Ensure pannellum positions the hotspots properly */
+        .pnlm-hotspot {
+          transition: none;
+        }
+
+        .next-hotspot {
+          /* Additional styling for next button */
+        }
+
+        .prev-hotspot {
+          /* Additional styling for prev button */
+        }
+      `}</style>
 
       <div className='relative max-w-7xl w-full h-full flex flex-col'>
         <div className='flex justify-between items-center p-4 text-white'>
@@ -228,31 +350,12 @@ const ImageViewer = ({
             className='w-full h-full'
           />
 
-          {/* Navigation Arrows */}
-          <div className='absolute inset-0 pointer-events-none'>
-            {/* Forward Arrow (centered right) */}
-            <button
-              onClick={onNextImage}
-              className='absolute top-2/3 right-1/2 transform -translate-y-1/2 z-10 bg-black bg-opacity-40 text-white rounded-full p-3 hover:bg-opacity-60 transition-all pointer-events-auto'
-              aria-label='Move forward'
-            >
-              <FaChevronCircleUp className='text-4xl' />
-            </button>
-
-            {/* Backward Arrow (centered left) */}
-            <button
-              onClick={onPrevImage}
-              className='absolute bottom-4 right-1/2 transform -translate-y-1/2 z-10 bg-black bg-opacity-40 text-white rounded-full p-3 hover:bg-opacity-60 transition-all pointer-events-auto'
-              aria-label='Move backward'
-            >
-              <FaChevronCircleDown className='text-4xl' />
-            </button>
-          </div>
+          {/* The navigation arrows are now replaced by hotspots */}
         </div>
 
         <div className='p-2 text-center text-white text-sm bg-gray-800'>
-          Use arrow keys to navigate along the path (← →) | Click arrow icons to
-          move | Press ESC to close | Drag to look around | Scroll to zoom
+          Click hotspots to move | Press ESC to close | Drag to look around |
+          Scroll to zoom
         </div>
       </div>
     </div>
