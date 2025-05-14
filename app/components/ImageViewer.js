@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useRef } from 'react';
-import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation';
-import Script from 'next/script';
-
+import { useState, useEffect, useRef } from "react";
+import { useKeyboardNavigation } from "../hooks/useKeyboardNavigation";
+import Script from "next/script";
+import { FaChevronCircleDown, FaChevronCircleUp } from "react-icons/fa";
 // Create a ref that persists across component mounts to track script loading
 let scriptLoadedGlobal = false;
 
@@ -40,7 +40,7 @@ const ImageViewer = ({
     if (loading) {
       // Set a safety timeout to hide loading indicator after 5 seconds
       loadTimeoutRef.current = setTimeout(() => {
-        console.log('Safety timeout reached - forcing loading state to false');
+        console.log("Safety timeout reached - forcing loading state to false");
         setLoading(false);
       }, 5000);
     }
@@ -57,16 +57,16 @@ const ImageViewer = ({
     if (pannellumInstance) {
       try {
         // Try to call the proper destroy method if available
-        if (typeof pannellumInstance.destroy === 'function') {
+        if (typeof pannellumInstance.destroy === "function") {
           pannellumInstance.destroy();
         }
       } catch (error) {
-        console.error('Error destroying pannellum instance:', error);
+        console.error("Error destroying pannellum instance:", error);
       }
 
       // Fallback cleanup - clear the HTML
       if (viewerRef.current) {
-        viewerRef.current.innerHTML = '';
+        viewerRef.current.innerHTML = "";
       }
 
       setPannellumInstance(null);
@@ -89,11 +89,11 @@ const ImageViewer = ({
         try {
           // Make sure the element is empty
           if (viewerRef.current) {
-            viewerRef.current.innerHTML = '';
+            viewerRef.current.innerHTML = "";
           }
 
           const viewer = window.pannellum.viewer(viewerRef.current.id, {
-            type: 'equirectangular',
+            type: "equirectangular",
             panorama: selectedImage.properties.imageUrl,
             autoLoad: true,
             showControls: true,
@@ -110,7 +110,7 @@ const ImageViewer = ({
             showZoomCtrl: true,
             keyboardZoom: true,
             onLoad: () => {
-              console.log('Pannellum onLoad callback fired');
+              console.log("Pannellum onLoad callback fired");
               // Clear any safety timeout
               if (loadTimeoutRef.current) {
                 clearTimeout(loadTimeoutRef.current);
@@ -118,7 +118,7 @@ const ImageViewer = ({
               setLoading(false);
             },
             onError: (err) => {
-              console.error('Pannellum Error:', err);
+              console.error("Pannellum Error:", err);
               setLoading(false);
             },
           });
@@ -126,11 +126,11 @@ const ImageViewer = ({
           // Add a manual check for when the image is loaded
           // Sometimes the onLoad callback isn't triggered correctly
           const panoramaImage =
-            viewerRef.current.querySelector('.pnlm-dragfix');
+            viewerRef.current.querySelector(".pnlm-dragfix");
           if (panoramaImage) {
             const checkImage = () => {
-              if (panoramaImage.classList.contains('pnlm-grab')) {
-                console.log('Detected loaded panorama via class check');
+              if (panoramaImage.classList.contains("pnlm-grab")) {
+                console.log("Detected loaded panorama via class check");
                 setLoading(false);
               }
             };
@@ -141,11 +141,11 @@ const ImageViewer = ({
 
           setPannellumInstance(viewer);
         } catch (err) {
-          console.error('Error initializing Pannellum:', err);
+          console.error("Error initializing Pannellum:", err);
           setLoading(false);
         }
       } else {
-        console.error('Pannellum not available on window object');
+        console.error("Pannellum not available on window object");
         setLoading(false);
       }
     }, 50); // Small delay to ensure DOM is ready
@@ -227,37 +227,32 @@ const ImageViewer = ({
             ref={viewerRef}
             className='w-full h-full'
           />
-        </div>
 
-        <div className='flex justify-between items-center p-4 bg-gray-900 controls-container'>
-          <button
-            onClick={onPrevImage}
-            disabled={currentIndex <= 0}
-            className={`px-4 py-2 bg-blue-600 rounded ${
-              currentIndex <= 0
-                ? 'opacity-50 cursor-not-allowed'
-                : 'hover:bg-blue-700'
-            }`}
-          >
-            Previous
-          </button>
+          {/* Navigation Arrows */}
+          <div className='absolute inset-0 pointer-events-none'>
+            {/* Forward Arrow (centered right) */}
+            <button
+              onClick={onNextImage}
+              className='absolute top-2/3 right-1/2 transform -translate-y-1/2 z-10 bg-black bg-opacity-40 text-white rounded-full p-3 hover:bg-opacity-60 transition-all pointer-events-auto'
+              aria-label='Move forward'
+            >
+              <FaChevronCircleUp className='text-4xl' />
+            </button>
 
-          <button
-            onClick={onNextImage}
-            disabled={currentIndex >= images.length - 1}
-            className={`px-4 py-2 bg-blue-600 rounded ${
-              currentIndex >= images.length - 1
-                ? 'opacity-50 cursor-not-allowed'
-                : 'hover:bg-blue-700'
-            }`}
-          >
-            Next
-          </button>
+            {/* Backward Arrow (centered left) */}
+            <button
+              onClick={onPrevImage}
+              className='absolute bottom-4 right-1/2 transform -translate-y-1/2 z-10 bg-black bg-opacity-40 text-white rounded-full p-3 hover:bg-opacity-60 transition-all pointer-events-auto'
+              aria-label='Move backward'
+            >
+              <FaChevronCircleDown className='text-4xl' />
+            </button>
+          </div>
         </div>
 
         <div className='p-2 text-center text-white text-sm bg-gray-800'>
-          Use arrow keys to navigate between images (← →) | Press ESC to close |
-          Drag to look around | Scroll to zoom
+          Use arrow keys to navigate along the path (← →) | Click arrow icons to
+          move | Press ESC to close | Drag to look around | Scroll to zoom
         </div>
       </div>
     </div>
