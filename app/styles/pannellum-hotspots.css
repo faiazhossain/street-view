@@ -1,0 +1,58 @@
+/* Hotspot styles for the panorama viewer */
+
+.custom-hotspot {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.5);
+  color: white;
+  cursor: pointer;
+  position: absolute;
+  margin-top: 160px;
+}
+
+.custom-hotspot:hover {
+  background: rgba(0, 0, 0, 0.8);
+  transform: scale(1.1);
+}
+
+.hotspot-icon {
+  font-size: 32px;
+  font-weight: bold;
+}
+
+.hotspot-icon svg {
+  width: 32px;
+  height: 32px;
+}
+
+.hotspot-text {
+  position: absolute;
+  bottom: -25px;
+  white-space: nowrap;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 3px 6px;
+  border-radius: 4px;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.custom-hotspot:hover .hotspot-text {
+  opacity: 1;
+}
+
+/* Ensure pannellum positions the hotspots properly */
+.pnlm-hotspot {
+  transition: none;
+}
+
+.next-hotspot {
+  /* Additional styling for next button */
+}
+
+.prev-hotspot {
+  /* Additional styling for prev button */
+}

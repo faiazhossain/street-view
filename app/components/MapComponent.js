@@ -1,15 +1,18 @@
-'use client';
+"use client";
 
-import { useState, useRef, useCallback } from 'react';
-import Map, { Source, Layer, Marker } from 'react-map-gl/maplibre';
-import 'maplibre-gl/dist/maplibre-gl.css';
+import { useState, useCallback } from "react";
+import Map, { Source } from "react-map-gl/maplibre";
+import PathLayer from "./map/PathLayer";
+import ImagePointsLayer from "./map/ImagePointsLayer";
+import SelectedMarker from "./map/SelectedMarker";
+import "maplibre-gl/dist/maplibre-gl.css";
 
 const MapComponent = ({
   imageData,
   pathData,
   selectedImageId,
   onImageSelect,
-  mapStyle = 'https://map.barikoi.com/styles/barikoi-light/style.json?key=NDE2NzpVNzkyTE5UMUoy',
+  mapStyle = "https://map.barikoi.com/styles/barikoi-light/style.json?key=NDE2NzpVNzkyTE5UMUoy",
 }) => {
   const [viewState, setViewState] = useState({
     longitude: imageData.features[0].geometry.coordinates[0],
@@ -35,37 +38,20 @@ const MapComponent = ({
   return (
     <Map
       {...viewState}
-      style={{ width: '100%', height: '500px' }}
+      style={{ width: "100%", height: "500px" }}
       mapStyle={mapStyle}
       onMove={(evt) => setViewState(evt.viewState)}
-      interactiveLayerIds={['image-points']}
+      interactiveLayerIds={["image-points"]}
       onClick={onMapClick}
     >
       {/* Path LineString Layer */}
       <Source id='path-source' type='geojson' data={pathData}>
-        <Layer
-          id='path-line'
-          type='line'
-          paint={{
-            'line-color': '#0080ff',
-            'line-width': 4,
-            'line-opacity': 0.8,
-          }}
-        />
+        <PathLayer />
       </Source>
 
       {/* Image Points Layer */}
       <Source id='images-source' type='geojson' data={imageData}>
-        <Layer
-          id='image-points'
-          type='circle'
-          paint={{
-            'circle-radius': 6,
-            'circle-color': '#ff0000',
-            'circle-stroke-width': 2,
-            'circle-stroke-color': '#ffffff',
-          }}
-        />
+        <ImagePointsLayer />
       </Source>
 
       {/* Selected Image Marker */}
@@ -73,16 +59,7 @@ const MapComponent = ({
         imageData.features
           .filter((feature) => feature.properties.id === selectedImageId)
           .map((feature) => (
-            <Marker
-              key={feature.properties.id}
-              longitude={feature.geometry.coordinates[0]}
-              latitude={feature.geometry.coordinates[1]}
-              anchor='bottom'
-            >
-              <div className='marker selected-marker'>
-                <div className='marker-pin' />
-              </div>
-            </Marker>
+            <SelectedMarker key={feature.properties.id} feature={feature} />
           ))}
     </Map>
   );
