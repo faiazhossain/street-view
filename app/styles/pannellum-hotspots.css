@@ -50,9 +50,28 @@
 }
 
 .next-hotspot {
-  /* Additional styling for next button */
+  /* Styling for next button */
+  background: rgba(0, 120, 255, 0.7); /* Blue background */
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  transform-origin: center center;
+}
+
+.next-hotspot:hover {
+  background: rgba(0, 67, 143, 0.9);
 }
 
 .prev-hotspot {
-  /* Additional styling for prev button */
+  /* Styling for prev button */
+  background: rgba(0, 255, 47, 0.7); /* Green background */
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  transform-origin: center center;
+}
+
+.prev-hotspot:hover {
+  background: rgba(9, 255, 0, 0.9);
+}
+
+/* Ensure hotspots are always visible regardless of view angle */
+.pnlm-container .pnlm-hotspot {
+  opacity: 1 !important;
 }

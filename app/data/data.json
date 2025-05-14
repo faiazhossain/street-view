@@ -1,0 +1,740 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "img10_sphere",
+        "imageUrl": "/track0/img10_sphere.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [90.364306, 23.822289]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "img11_sphere",
+        "imageUrl": "/track0/img11_sphere.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [90.364314, 23.822281]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "img12_sphere",
+        "imageUrl": "/track0/img12_sphere.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [90.364322, 23.822272]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "img13_sphere",
+        "imageUrl": "/track0/img13_sphere.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [90.364325, 23.822264]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "img14_sphere",
+        "imageUrl": "/track0/img14_sphere.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [90.364325, 23.822253]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "img15_sphere",
+        "imageUrl": "/track0/img15_sphere.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [90.364322, 23.822242]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "img16_sphere",
+        "imageUrl": "/track0/img16_sphere.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [90.364322, 23.822231]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "img17_sphere",
+        "imageUrl": "/track0/img17_sphere.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [90.364322, 23.822219]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "img18_sphere",
+        "imageUrl": "/track0/img18_sphere.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [90.364322, 23.822208]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "img19_sphere",
+        "imageUrl": "/track0/img19_sphere.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [90.364325, 23.822197]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "img1_sphere",
+        "imageUrl": "/track0/img1_sphere.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [90.364294, 23.822347]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "img20_sphere",
+        "imageUrl": "/track0/img20_sphere.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [90.364325, 23.822189]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "img21_sphere",
+        "imageUrl": "/track0/img21_sphere.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [90.364325, 23.822178]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "img22_sphere",
+        "imageUrl": "/track0/img22_sphere.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [90.364328, 23.822167]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "img23_sphere",
+        "imageUrl": "/track0/img23_sphere.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [90.364328, 23.822156]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "img24_sphere",
+        "imageUrl": "/track0/img24_sphere.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [90.364328, 23.822144]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "img25_sphere",
+        "imageUrl": "/track0/img25_sphere.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [90.364331, 23.822131]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "img26_sphere",
+        "imageUrl": "/track0/img26_sphere.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [90.364331, 23.822119]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "img27_sphere",
+        "imageUrl": "/track0/img27_sphere.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [90.364331, 23.822108]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "img28_sphere",
+        "imageUrl": "/track0/img28_sphere.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [90.364331, 23.822094]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "img29_sphere",
+        "imageUrl": "/track0/img29_sphere.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [90.364333, 23.822081]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "img2_sphere",
+        "imageUrl": "/track0/img2_sphere.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [90.364294, 23.822339]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "img30_sphere",
+        "imageUrl": "/track0/img30_sphere.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [90.364339, 23.822069]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "img31_sphere",
+        "imageUrl": "/track0/img31_sphere.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [90.364342, 23.822061]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "img32_sphere",
+        "imageUrl": "/track0/img32_sphere.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [90.364347, 23.82205]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "img33_sphere",
+        "imageUrl": "/track0/img33_sphere.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [90.364347, 23.822039]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "img34_sphere",
+        "imageUrl": "/track0/img34_sphere.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [90.36435, 23.822028]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "img35_sphere",
+        "imageUrl": "/track0/img35_sphere.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [90.364353, 23.822014]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "img36_sphere",
+        "imageUrl": "/track0/img36_sphere.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [90.364353, 23.822003]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "img37_sphere",
+        "imageUrl": "/track0/img37_sphere.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [90.364358, 23.821992]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "img38_sphere",
+        "imageUrl": "/track0/img38_sphere.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [90.364364, 23.821981]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "img39_sphere",
+        "imageUrl": "/track0/img39_sphere.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [90.364369, 23.821967]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "img3_sphere",
+        "imageUrl": "/track0/img3_sphere.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [90.364294, 23.822336]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "img40_sphere",
+        "imageUrl": "/track0/img40_sphere.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [90.364372, 23.821956]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "img41_sphere",
+        "imageUrl": "/track0/img41_sphere.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [90.364381, 23.821942]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "img42_sphere",
+        "imageUrl": "/track0/img42_sphere.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [90.364386, 23.821928]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "img43_sphere",
+        "imageUrl": "/track0/img43_sphere.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [90.364389, 23.821914]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "img44_sphere",
+        "imageUrl": "/track0/img44_sphere.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [90.364389, 23.821903]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "img45_sphere",
+        "imageUrl": "/track0/img45_sphere.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [90.364394, 23.821892]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "img46_sphere",
+        "imageUrl": "/track0/img46_sphere.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [90.364392, 23.821881]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "img47_sphere",
+        "imageUrl": "/track0/img47_sphere.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [90.364394, 23.821869]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "img48_sphere",
+        "imageUrl": "/track0/img48_sphere.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [90.364397, 23.821858]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "img49_sphere",
+        "imageUrl": "/track0/img49_sphere.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [90.364397, 23.821844]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "img4_sphere",
+        "imageUrl": "/track0/img4_sphere.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [90.364297, 23.822328]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "img5_sphere",
+        "imageUrl": "/track0/img5_sphere.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [90.364297, 23.822317]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "img6_sphere",
+        "imageUrl": "/track0/img6_sphere.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [90.3643, 23.822311]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "img7_sphere",
+        "imageUrl": "/track0/img7_sphere.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [90.364294, 23.822311]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "img8_sphere",
+        "imageUrl": "/track0/img8_sphere.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [90.364292, 23.822306]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "img9_sphere",
+        "imageUrl": "/track0/img9_sphere.jpg",
+        "initialYaw": 0,
+        "initialPitch": 0,
+        "initialHfov": 100,
+        "showCompass": true
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [90.364292, 23.822294]
+      }
+    }
+  ]
+}

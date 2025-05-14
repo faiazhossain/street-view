@@ -2,6 +2,11 @@
 
 import { useState, useEffect, useRef } from "react";
 import Script from "next/script";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  saveViewPosition,
+  selectViewPosition,
+} from "@/app/redux/slices/panoramaSlice";
 
 // Create a ref that persists across component mounts to track script loading
 let scriptLoadedGlobal = false;
@@ -17,14 +22,56 @@ const PannellumViewer = ({
   const [pannellumInstance, setPannellumInstance] = useState(null);
   const viewerId = useRef(`panorama-viewer-${Date.now()}`); // Generate unique ID for each instance
 
+  // Redux
+  const dispatch = useDispatch();
+  const savedViewPosition = useSelector((state) =>
+    selectViewPosition(state, selectedImage?.properties?.id)
+  );
+
   // Handle script loading
   const handleScriptLoad = () => {
     scriptLoadedGlobal = true;
     setScriptLoaded(true);
   };
 
+  // Function to save the current view position to Redux
+  const saveCurrentViewPosition = () => {
+    if (pannellumInstance && selectedImage) {
+      try {
+        const position = {
+          yaw: pannellumInstance.getYaw(),
+          pitch: pannellumInstance.getPitch(),
+          hfov: pannellumInstance.getHfov(),
+        };
+
+        // Compare with existing position before dispatching
+        if (
+          !savedViewPosition ||
+          Math.abs(savedViewPosition.yaw - position.yaw) > 1 ||
+          Math.abs(savedViewPosition.pitch - position.pitch) > 1 ||
+          Math.abs(savedViewPosition.hfov - position.hfov) > 1
+        ) {
+          dispatch(
+            saveViewPosition({
+              imageId: selectedImage.properties.id,
+              position,
+            })
+          );
+
+          // Only log when debugging is needed - comment out for production
+          // console.log(`Saved position for ${selectedImage.properties.id}:`, position);
+        }
+      } catch (error) {
+        console.error("Error saving view position:", error);
+      }
+    }
+  };
+
   // Proper cleanup function to fully destroy Pannellum
   const cleanupPannellum = () => {
+    // Save the current view position before cleanup
+    saveCurrentViewPosition();
+
     if (pannellumInstance) {
       try {
         // Try to call the proper destroy method if available
@@ -48,6 +95,14 @@ const PannellumViewer = ({
   useEffect(() => {
     if (!scriptLoaded || !selectedImage || !viewerRef.current) return;
 
+    // Create a flag to track if we already have an instance for this specific image
+    const currentImageId = selectedImage.properties.id;
+    const hasExistingInstanceForImage =
+      pannellumInstance && viewerRef.current._currentImageId === currentImageId;
+
+    // Skip initialization if we already have an instance for this image
+    if (hasExistingInstanceForImage) return;
+
     // Clean up previous instance
     cleanupPannellum();
 
@@ -59,6 +114,8 @@ const PannellumViewer = ({
           // Make sure the element is empty
           if (viewerRef.current) {
             viewerRef.current.innerHTML = "";
+            // Store the current image ID on the DOM element for reference
+            viewerRef.current._currentImageId = currentImageId;
           }
 
           // Find the current index in the images array to determine if prev/next buttons should be shown
@@ -69,14 +126,29 @@ const PannellumViewer = ({
           // Create hotspots for navigation
           const hotSpots = [];
 
-          // Initial yaw from the selected image
-          const initialYaw = selectedImage.properties.initialYaw || 0;
+          // Get initialYaw from the saved position or the default from data
+          // Use saved view position if available, otherwise use the default from image data
+          const initialYaw = savedViewPosition
+            ? savedViewPosition.yaw
+            : selectedImage.properties.initialYaw || 0;
+          const initialPitch = savedViewPosition
+            ? savedViewPosition.pitch
+            : selectedImage.properties.initialPitch || 0;
+          const initialHfov = savedViewPosition
+            ? savedViewPosition.hfov
+            : selectedImage.properties.initialHfov || 100;
+
+          // Calculate next and previous hotspot yaw values
+          // Next is 270 degrees from initialYaw, Previous is 90 degrees from initialYaw
+          // This ensures they are exactly opposite (180 degrees apart)
+          const nextYaw = selectedImage.properties.initialYaw % 360;
+          const prevYaw = (selectedImage.properties.initialYaw + 180) % 360;
 
           // Add Next button hotspot if not the last image
           if (currentIndex < images.length - 1) {
             hotSpots.push({
               pitch: 0,
-              yaw: 270, // 270 degrees to the right of initial view
+              yaw: nextYaw, // 270 degrees from initial view
               type: "custom",
               cssClass: "custom-hotspot next-hotspot",
               createTooltipFunc: (hotSpotDiv) => {
@@ -92,7 +164,11 @@ const PannellumViewer = ({
                 nextText.classList.add("hotspot-text");
                 hotSpotDiv.appendChild(nextText);
 
-                hotSpotDiv.addEventListener("click", onNextImage);
+                // Save current view position before navigating
+                hotSpotDiv.addEventListener("click", () => {
+                  saveCurrentViewPosition();
+                  onNextImage();
+                });
               },
             });
           }
@@ -101,7 +177,7 @@ const PannellumViewer = ({
           if (currentIndex > 0) {
             hotSpots.push({
               pitch: 0,
-              yaw: 90, // 90 degrees to the left of initial view
+              yaw: prevYaw, // 90 degrees from initial view
               type: "custom",
               cssClass: "custom-hotspot prev-hotspot",
               createTooltipFunc: (hotSpotDiv) => {
@@ -117,9 +193,21 @@ const PannellumViewer = ({
                 prevText.classList.add("hotspot-text");
                 hotSpotDiv.appendChild(prevText);
 
-                hotSpotDiv.addEventListener("click", onPrevImage);
+                // Save current view position before navigating
+                hotSpotDiv.addEventListener("click", () => {
+                  saveCurrentViewPosition();
+                  onPrevImage();
+                });
               },
             });
+          }
+
+          // Log the view values for debugging only when needed
+          if (process.env.NODE_ENV === "development" && false) {
+            // Set to true when debugging is needed
+            console.log(
+              `Initial values - Yaw: ${initialYaw}, Pitch: ${initialPitch}, HFOV: ${initialHfov}, Next Yaw: ${nextYaw}, Prev Yaw: ${prevYaw}`
+            );
           }
 
           const viewer = window.pannellum.viewer(viewerRef.current.id, {
@@ -129,9 +217,9 @@ const PannellumViewer = ({
             showControls: true,
             compass: selectedImage.properties.showCompass || true,
             northOffset: 247.5,
-            yaw: selectedImage.properties.initialYaw || 0,
-            pitch: selectedImage.properties.initialPitch || 0,
-            hfov: selectedImage.properties.initialHfov || 100,
+            yaw: initialYaw,
+            pitch: initialPitch,
+            hfov: initialHfov,
             minHfov: 50,
             maxHfov: 120,
             mouseZoom: true,
@@ -162,7 +250,47 @@ const PannellumViewer = ({
       clearTimeout(initTimer);
       cleanupPannellum();
     };
-  }, [selectedImage, scriptLoaded, images, onNextImage, onPrevImage]);
+  }, [
+    selectedImage,
+    scriptLoaded,
+    images,
+    onNextImage,
+    onPrevImage,
+    savedViewPosition,
+    dispatch,
+  ]);
+
+  // Save the current view position periodically while user is interacting with the panorama
+  useEffect(() => {
+    if (!pannellumInstance || !selectedImage) return;
+
+    // Save view position less frequently (every 5 seconds instead of 2)
+    // This reduces Redux state updates and potential re-renders
+    const saveInterval = setInterval(saveCurrentViewPosition, 5000);
+
+    // Save position on user interactions
+    const handleInteraction = () => {
+      // Use a debounced version of the save function to prevent excessive saves
+      clearTimeout(viewerRef.current.saveTimeout);
+      viewerRef.current.saveTimeout = setTimeout(saveCurrentViewPosition, 500);
+    };
+
+    if (viewerRef.current) {
+      viewerRef.current.addEventListener("mousedown", handleInteraction);
+      viewerRef.current.addEventListener("wheel", handleInteraction);
+      viewerRef.current.addEventListener("touchstart", handleInteraction);
+    }
+
+    return () => {
+      clearInterval(saveInterval);
+      if (viewerRef.current) {
+        viewerRef.current.removeEventListener("mousedown", handleInteraction);
+        viewerRef.current.removeEventListener("wheel", handleInteraction);
+        viewerRef.current.removeEventListener("touchstart", handleInteraction);
+        clearTimeout(viewerRef.current.saveTimeout);
+      }
+    };
+  }, [pannellumInstance, selectedImage?.properties?.id]);
 
   // Final cleanup on component unmount
   useEffect(() => {
