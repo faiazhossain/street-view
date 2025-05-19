@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Street View - JavaScript Version</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/maplibre-gl@3.1.0/dist/maplibre-gl.css"
+    />
+    <link rel="stylesheet" href="css/styles.css" />
+  </head>
+  <body>
+    <main class="container">
+      <h1 class="title">Personal Street View</h1>
+      <p class="description">
+        Click on any point along the path to view the 360° image at that
+        location. Navigate between images using the previous and next buttons.
+      </p>
+
+      <div class="map-container">
+        <div id="map"></div>
+      </div>
+
+      <div id="viewer-container" class="hidden">
+        <div class="viewer-header">
+          <h2 id="viewer-title"></h2>
+          <button id="close-viewer" class="btn-close" aria-label="Close viewer">
+            ×
+          </button>
+        </div>
+
+        <div id="panorama-viewer" class="panorama-container"></div>
+
+        <div class="navigation-controls">
+          <button id="prev-image" class="nav-btn">Previous</button>
+          <button id="next-image" class="nav-btn">Next</button>
+        </div>
+
+        <div class="viewer-footer">
+          <div class="instructions">
+            Click hotspots to move | Press ESC to close | Drag to look around |
+            Scroll to zoom
+          </div>
+          <button id="toggle-autoplay" class="btn-autoplay">
+            <span id="autoplay-text">Auto Play</span>
+          </button>
+        </div>
+      </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js"></script>
+    <script src="https://unpkg.com/maplibre-gl@3.1.0/dist/maplibre-gl.js"></script>
+    <script src="js/data.js"></script>
+    <script src="js/map.js"></script>
+    <script src="js/panorama.js"></script>
+    <script src="js/app.js"></script>
+  </body>
+</html>
