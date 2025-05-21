@@ -4,7 +4,15 @@ let imagePath = null;
 
 // Function to generate path data from images
 function generatePathData(images) {
-  // Create a LineString from the coordinates of all images
+  // First sort the features by numeric ID extracted from feature ID
+  const sortedFeatures = [...images.features].sort((a, b) => {
+    // Extract the numeric part from id (img1, img2, etc.)
+    const numA = parseInt(a.properties.id.replace(/\D/g, "")) || 0;
+    const numB = parseInt(b.properties.id.replace(/\D/g, "")) || 0;
+    return numA - numB;
+  });
+
+  // Create a LineString from the coordinates of all images in sorted order
   return {
     type: "FeatureCollection",
     features: [
@@ -13,7 +21,7 @@ function generatePathData(images) {
         properties: {},
         geometry: {
           type: "LineString",
-          coordinates: images.features.map(
+          coordinates: sortedFeatures.map(
             (feature) => feature.geometry.coordinates
           ),
         },

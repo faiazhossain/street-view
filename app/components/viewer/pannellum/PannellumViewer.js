@@ -141,8 +141,8 @@ const PannellumViewer = ({
           // Calculate next and previous hotspot yaw values
           // Next is 270 degrees from initialYaw, Previous is 90 degrees from initialYaw
           // This ensures they are exactly opposite (180 degrees apart)
-          const nextYaw = selectedImage.properties.initialYaw % 360;
-          const prevYaw = (selectedImage.properties.initialYaw + 180) % 360;
+          const nextYaw = (selectedImage.properties.initialYaw + 270) % 360;
+          const prevYaw = (selectedImage.properties.initialYaw + 90) % 360;
 
           // Add Next button hotspot if not the last image
           if (currentIndex < images.length - 1) {

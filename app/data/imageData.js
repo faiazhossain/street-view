@@ -34,8 +34,16 @@ export function useImageData() {
           throw new Error("Invalid data format received from API");
         }
 
+        // Sort the data by numerical ID first
+        const sortedData = [...result.data].sort((a, b) => {
+          // Extract the numeric part from feature_id (img1, img2, etc.)
+          const numA = parseInt(a.feature_id.replace(/\D/g, "")) || 0;
+          const numB = parseInt(b.feature_id.replace(/\D/g, "")) || 0;
+          return numA - numB;
+        });
+
         // Transform API data into GeoJSON format
-        const features = result.data.map((item) => {
+        const features = sortedData.map((item) => {
           // Convert image URL to relative path that will be served through Next.js
           const imageUrl = item.image_url
             ? // If the image URL is absolute with the IP, convert it to a relative path
