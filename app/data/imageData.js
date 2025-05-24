@@ -30,66 +30,197 @@ export function useImageData() {
 
         const result = await response.json();
 
-        if (result.status !== "success" || !Array.isArray(result.data)) {
-          throw new Error("Invalid data format received from API");
+        // Handle error response
+        if (result.status === "error") {
+          throw new Error(result.message || "Unknown API error");
         }
 
-        // Sort the data by numerical ID first
-        const sortedData = [...result.data].sort((a, b) => {
-          // Extract the numeric part from feature_id (img1, img2, etc.)
-          const numA = parseInt(a.feature_id.replace(/\D/g, "")) || 0;
-          const numB = parseInt(b.feature_id.replace(/\D/g, "")) || 0;
-          return numA - numB;
-        });
+        // Check if the response is already a properly formatted GeoJSON FeatureCollection
+        if (
+          result.type === "FeatureCollection" &&
+          Array.isArray(result.features)
+        ) {
+          // The API route is already returning properly formatted GeoJSON
+          setImageData(result);
 
-        // Transform API data into GeoJSON format
-        const features = sortedData.map((item) => {
-          // Convert image URL to relative path that will be served through Next.js
-          const imageUrl = item.image_url
-            ? // If the image URL is absolute with the IP, convert it to a relative path
-              item.image_url.replace(
-                "http://192.168.68.112:8000/",
-                "/api/proxy/"
-              )
-            : item.image_url;
+          // Generate path from the points
+          if (result.features.length > 0) {
+            // Check if we need to group by track
+            const trackGroups = {};
 
-          return {
-            type: "Feature",
-            properties: {
-              id: item.feature_id,
-              imageUrl: imageUrl,
-              initialYaw: item.initial_yaw,
-              initialPitch: item.initial_pitch,
-              initialHfov: item.initial_hfov,
-              showCompass: item.show_compass,
-            },
-            geometry: {
-              type: "Point",
-              coordinates: [item.longitude, item.latitude],
-            },
+            // Group features by track ID
+            result.features.forEach((feature) => {
+              const id = feature.properties.id;
+              // Extract track name using regex (e.g., "track0" from "img_track0_265")
+              const trackMatch = id.match(/img_([^_]+)/);
+
+              if (trackMatch) {
+                const trackName = trackMatch[1]; // This will be "track0", "track1", etc.
+                if (!trackGroups[trackName]) {
+                  trackGroups[trackName] = [];
+                }
+                trackGroups[trackName].push(feature);
+              } else {
+                // If no track match, put in default group
+                if (!trackGroups["default"]) {
+                  trackGroups["default"] = [];
+                }
+                trackGroups[trackName].push(feature);
+              }
+            });
+
+            // Create path GeoJSON with multiple LineStrings (one per track)
+            const paths = {
+              type: "FeatureCollection",
+              features: Object.keys(trackGroups).map((trackName) => {
+                // Sort features by ID before creating the path
+                const sortedFeatures = [...trackGroups[trackName]].sort(
+                  (a, b) => {
+                    // Extract the numeric part from id (img_track0_265, etc.)
+                    const numA = parseInt(
+                      a.properties.id.match(/_(\d+)$/)?.[1] || 0
+                    );
+                    const numB = parseInt(
+                      b.properties.id.match(/_(\d+)$/)?.[1] || 0
+                    );
+                    return numA - numB;
+                  }
+                );
+
+                return {
+                  type: "Feature",
+                  properties: { trackName },
+                  geometry: {
+                    type: "LineString",
+                    coordinates: sortedFeatures.map(
+                      (feature) => feature.geometry.coordinates
+                    ),
+                  },
+                };
+              }),
+            };
+
+            setImagePath(paths);
+          }
+
+          setIsLoading(false);
+          return;
+        }
+
+        // Handle old API format
+        if (result.status === "success" && Array.isArray(result.data)) {
+          // Sort the data by numerical ID first
+          const sortedData = [...result.data].sort((a, b) => {
+            // Extract the numeric part from feature_id (img1, img2, etc.)
+            const numA = parseInt(a.feature_id?.replace(/\D/g, "") || 0);
+            const numB = parseInt(b.feature_id?.replace(/\D/g, "") || 0);
+            return numA - numB;
+          });
+
+          // Transform API data into GeoJSON format
+          const features = sortedData.map((item) => {
+            // Handle different image URL formats
+            const imageUrl =
+              item.image_url_high || item.imageUrl_High || item.image_url || "";
+
+            return {
+              type: "Feature",
+              properties: {
+                id: item.feature_id || item.id,
+                imageUrl: imageUrl.replace(
+                  "http://192.168.68.112:8000/",
+                  "/api/proxy/"
+                ),
+                imageUrl_High: (
+                  item.image_url_high ||
+                  item.imageUrl_High ||
+                  ""
+                ).replace("http://192.168.68.112:8000/", "/api/proxy/"),
+                imageUrl_Comp: (
+                  item.image_url_comp ||
+                  item.imageUrl_Comp ||
+                  ""
+                ).replace("http://192.168.68.112:8000/", "/api/proxy/"),
+                initialYaw: item.initial_yaw || item.initialYaw || 0,
+                initialPitch: item.initial_pitch || item.initialPitch || 0,
+                initialHfov: item.initial_hfov || item.initialHfov || 100,
+                showCompass: item.show_compass || item.showCompass || true,
+              },
+              geometry: {
+                type: "Point",
+                coordinates: [
+                  parseFloat(item.longitude || 0),
+                  parseFloat(item.latitude || 0),
+                ],
+              },
+            };
+          });
+
+          const geoJSON = {
+            type: "FeatureCollection",
+            features,
           };
-        });
 
-        const geoJSON = {
-          type: "FeatureCollection",
-          features,
-        };
+          setImageData(geoJSON);
 
-        setImageData(geoJSON);
+          // Group by tracks (for line segments)
+          const trackGroups = {};
 
-        // Generate path from the points
-        if (features.length > 0) {
-          const pathGeoJSON = {
-            type: "Feature",
-            properties: {},
-            geometry: {
-              type: "LineString",
-              coordinates: features.map(
-                (feature) => feature.geometry.coordinates
-              ),
-            },
+          // Group features by track ID
+          features.forEach((feature) => {
+            const id = feature.properties.id;
+            // Extract track name using regex (e.g., "track0" from "img_track0_265")
+            const trackMatch = id.match(/img_([^_]+)/);
+
+            if (trackMatch) {
+              const trackName = trackMatch[1]; // This will be "track0", "track1", etc.
+              if (!trackGroups[trackName]) {
+                trackGroups[trackName] = [];
+              }
+              trackGroups[trackName].push(feature);
+            } else {
+              // If no track match, put in default group
+              if (!trackGroups["default"]) {
+                trackGroups["default"] = [];
+              }
+              trackGroups["default"].push(feature);
+            }
+          });
+
+          // Create path GeoJSON with multiple LineStrings (one per track)
+          const paths = {
+            type: "FeatureCollection",
+            features: Object.keys(trackGroups).map((trackName) => {
+              // Sort features by ID before creating the path
+              const sortedFeatures = [...trackGroups[trackName]].sort(
+                (a, b) => {
+                  // Extract numeric part from id
+                  const numA = parseInt(
+                    a.properties.id.match(/_(\d+)$/)?.[1] || 0
+                  );
+                  const numB = parseInt(
+                    b.properties.id.match(/_(\d+)$/)?.[1] || 0
+                  );
+                  return numA - numB;
+                }
+              );
+
+              return {
+                type: "Feature",
+                properties: { trackName },
+                geometry: {
+                  type: "LineString",
+                  coordinates: sortedFeatures.map(
+                    (feature) => feature.geometry.coordinates
+                  ),
+                },
+              };
+            }),
           };
-          setImagePath(pathGeoJSON);
+
+          setImagePath(paths);
+        } else {
+          throw new Error("Invalid data format received from API");
         }
 
         setIsLoading(false);

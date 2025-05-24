@@ -1,9 +1,7 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import Map, { Source } from "react-map-gl/maplibre";
-import PathLayer from "./map/PathLayer";
-import ImagePointsLayer from "./map/ImagePointsLayer";
+import React, { useState, useCallback, useEffect } from "react";
+import Map, { Source, Layer } from "react-map-gl/maplibre";
 import SelectedMarker from "./map/SelectedMarker";
 import "maplibre-gl/dist/maplibre-gl.css";
 
@@ -15,10 +13,104 @@ const MapComponent = ({
   mapStyle = "https://map.barikoi.com/styles/barikoi-light/style.json?key=NDE2NzpVNzkyTE5UMUoy",
 }) => {
   const [viewState, setViewState] = useState({
-    longitude: imageData.features[0].geometry.coordinates[0],
-    latitude: imageData.features[0].geometry.coordinates[1],
+    longitude: imageData.features[0]?.geometry.coordinates[0] || 0,
+    latitude: imageData.features[0]?.geometry.coordinates[1] || 0,
     zoom: 14,
   });
+
+  // State to store track groups
+  const [trackGroups, setTrackGroups] = useState({});
+
+  // Calculate circle radius based on zoom level
+  const getCircleRadius = () => {
+    // Base radius at zoom level 14
+    const baseRadius = 1.5;
+
+    // More pronounced zoom scaling
+    const zoomFactor = Math.pow(1.75, viewState.zoom - 14);
+
+    // Limit the minimum and maximum size
+    // Smaller minimum size (1.5) for low zoom levels
+    return Math.max(2, Math.min(baseRadius * zoomFactor, 12));
+  };
+
+  // Group images by their track ID
+  useEffect(() => {
+    if (!imageData.features || imageData.features.length === 0) return;
+
+    const groups = {};
+
+    // Process each image
+    imageData.features.forEach((feature) => {
+      const id = feature.properties.id;
+      // Extract track name using regex (e.g., "track0" from "img_track0_265")
+      const trackMatch = id.match(/img_([^_]+)/);
+
+      if (trackMatch) {
+        const trackName = trackMatch[1]; // This will be "track0", "track1", etc.
+
+        // Initialize track group if first time seeing this track
+        if (!groups[trackName]) {
+          groups[trackName] = {
+            features: [],
+            color: getTrackColor(trackName), // Get a unique color for each track
+            path: {
+              type: "Feature",
+              properties: {},
+              geometry: {
+                type: "LineString",
+                coordinates: [],
+              },
+            },
+          };
+        }
+
+        // Add feature to track group
+        groups[trackName].features.push(feature);
+      } else {
+        // Handle images without expected track format (fallback)
+        if (!groups["default"]) {
+          groups["default"] = {
+            features: [],
+            color: "#0080ff", // Default color
+            path: {
+              type: "Feature",
+              properties: {},
+              geometry: {
+                type: "LineString",
+                coordinates: [],
+              },
+            },
+          };
+        }
+        groups["default"].features.push(feature);
+      }
+    });
+
+    // Create path LineString for each track
+    Object.keys(groups).forEach((trackName) => {
+      // Sort features by ID if needed for proper path order
+      const sortedFeatures = [...groups[trackName].features].sort((a, b) => {
+        // Extract the numeric part from id (img_track0_265, etc.)
+        const numA = parseInt(a.properties.id.match(/_(\d+)$/)?.[1] || 0);
+        const numB = parseInt(b.properties.id.match(/_(\d+)$/)?.[1] || 0);
+        return numA - numB;
+      });
+
+      // Create path coordinates from sorted features
+      groups[trackName].path.geometry.coordinates = sortedFeatures.map(
+        (feature) => feature.geometry.coordinates
+      );
+    });
+
+    setTrackGroups(groups);
+  }, [imageData]);
+
+  // Generate different colors for different tracks
+  const getTrackColor = () => {
+    // Return static blue color for all tracks
+    return "#0080ff";
+  };
 
   const onMapClick = useCallback(
     (event) => {
@@ -35,24 +127,63 @@ const MapComponent = ({
     [onImageSelect]
   );
 
+  // Get all layer IDs for interactive layers
+  const interactiveLayerIds = Object.keys(trackGroups).map(
+    (trackName) => `${trackName}-points`
+  );
+
   return (
     <Map
       {...viewState}
       style={{ width: "100%", height: "500px" }}
       mapStyle={mapStyle}
       onMove={(evt) => setViewState(evt.viewState)}
-      interactiveLayerIds={["image-points"]}
+      interactiveLayerIds={interactiveLayerIds}
       onClick={onMapClick}
     >
-      {/* Path LineString Layer */}
-      <Source id='path-source' type='geojson' data={pathData}>
-        <PathLayer />
-      </Source>
+      {/* Track-specific Layers */}
+      {Object.keys(trackGroups).map((trackName) => (
+        <React.Fragment key={trackName}>
+          {/* First render the track path layer (lines below) */}
+          <Source
+            id={`${trackName}-path-source`}
+            type='geojson'
+            data={trackGroups[trackName].path}
+          >
+            <Layer
+              id={`${trackName}-path-line`}
+              type='line'
+              paint={{
+                "line-color": trackGroups[trackName].color,
+                "line-width": 4,
+                "line-opacity": 0.8,
+              }}
+            />
+          </Source>
 
-      {/* Image Points Layer */}
-      <Source id='images-source' type='geojson' data={imageData}>
-        <ImagePointsLayer />
-      </Source>
+          {/* Then render the track points layer (points on top) */}
+          <Source
+            id={`${trackName}-points-source`}
+            type='geojson'
+            data={{
+              type: "FeatureCollection",
+              features: trackGroups[trackName].features,
+            }}
+          >
+            <Layer
+              id={`${trackName}-points`}
+              type='circle'
+              paint={{
+                "circle-radius": getCircleRadius(),
+                "circle-color": "#FF0000", // Red color for all points
+                "circle-opacity": 0.8,
+                "circle-stroke-width": 0.5,
+                "circle-stroke-color": "#fff",
+              }}
+            />
+          </Source>
+        </React.Fragment>
+      ))}
 
       {/* Selected Image Marker */}
       {selectedImageId &&

@@ -11,6 +11,33 @@ import {
 // Create a ref that persists across component mounts to track script loading
 let scriptLoadedGlobal = false;
 
+// Helper function to ensure image URLs are correctly formatted
+const processImageUrl = (url) => {
+  if (!url) return "";
+
+  // If URL is already a relative path starting with /api/proxy, leave as is
+  if (url.startsWith("/api/proxy/")) {
+    return url;
+  }
+
+  // If URL contains the backend server IP, replace with proxy path
+  if (url.includes("192.168.68.112:8000")) {
+    return url.replace("http://192.168.68.112:8000/", "/api/proxy/");
+  }
+
+  // If URL is a direct path (like "track0/image.jpg"), add proxy prefix
+  if (
+    !url.startsWith("http://") &&
+    !url.startsWith("https://") &&
+    !url.startsWith("/")
+  ) {
+    return `/api/proxy/${url}`;
+  }
+
+  // If it's a full URL but not to our backend, return as is
+  return url;
+};
+
 const PannellumViewer = ({
   selectedImage,
   images,
@@ -212,7 +239,10 @@ const PannellumViewer = ({
 
           const viewer = window.pannellum.viewer(viewerRef.current.id, {
             type: "equirectangular",
-            panorama: selectedImage.properties.imageUrl,
+            panorama: processImageUrl(
+              selectedImage.properties.imageUrl_High ||
+                selectedImage.properties.imageUrl
+            ),
             autoLoad: true,
             showControls: true,
             compass: selectedImage.properties.showCompass || true,
