@@ -1,13 +1,13 @@
 /* Hotspot styles for the panorama viewer */
 
 .custom-hotspot {
-  width: 50px;
-  height: 50px;
+  width: 60px;
+  height: 60px;
   border-radius: 50%;
   display: flex;
   justify-content: center;
   align-items: center;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(90, 90, 90, 0.7); /* Gray background */
   color: white;
   cursor: pointer;
   position: absolute;
@@ -15,7 +15,7 @@
 }
 
 .custom-hotspot:hover {
-  background: rgba(0, 0, 0, 0.8);
+  background: rgba(120, 120, 120, 0.9); /* Darker gray on hover */
   transform: scale(1.1);
 }
 
@@ -31,44 +31,50 @@
 
 .hotspot-text {
   position: absolute;
-  bottom: -25px;
+  bottom: -18px;
   white-space: nowrap;
-  background: rgba(0, 0, 0, 0.7);
-  padding: 3px 6px;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 2px 4px;
   border-radius: 4px;
-  opacity: 0;
-  transition: opacity 0.3s;
+  opacity: 1; /* Always show the text */
+  font-weight: bold;
+  font-size: 10px;
+  text-align: center;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 .custom-hotspot:hover .hotspot-text {
   opacity: 1;
+  background: rgba(0, 0, 0, 0.8);
 }
 
 /* Ensure pannellum positions the hotspots properly */
 .pnlm-hotspot {
   transition: none;
+  transform-style: preserve-3d;
 }
 
 .next-hotspot {
   /* Styling for next button */
-  background: rgba(0, 120, 255, 0.7); /* Blue background */
+  background: rgba(90, 90, 90, 0.2); /* Gray background */
   border: 2px solid rgba(255, 255, 255, 0.8);
   transform-origin: center center;
 }
 
 .next-hotspot:hover {
-  background: rgba(0, 67, 143, 0.9);
+  background: rgba(120, 120, 120, 0.6); /* Darker gray on hover */
 }
 
 .prev-hotspot {
   /* Styling for prev button */
-  background: rgba(0, 255, 47, 0.7); /* Green background */
+  background: rgba(90, 90, 90, 0.2); /* Gray background */
   border: 2px solid rgba(255, 255, 255, 0.8);
   transform-origin: center center;
 }
 
 .prev-hotspot:hover {
-  background: rgba(9, 255, 0, 0.9);
+  background: rgba(120, 120, 120, 0.6); /* Darker gray on hover */
 }
 
 /* Ensure hotspots are always visible regardless of view angle */
@@ -79,18 +85,23 @@
 /* Fixed navigation controls */
 .fixed-nav-controls {
   position: absolute;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
+  right: 20px;
+  top: 50%;
+  transform: translateY(-50%);
   display: flex;
-  gap: 20px;
   z-index: 100;
   pointer-events: auto;
 }
 
+.vertical-nav-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
 .nav-btn {
-  width: 50px;
-  height: 50px;
+  width: 60px;
+  height: 60px;
   border-radius: 50%;
   background: rgba(0, 0, 0, 0.6);
   display: flex;
@@ -99,6 +110,22 @@
   cursor: pointer;
   transition: all 0.2s ease;
   border: 2px solid rgba(255, 255, 255, 0.7);
+  position: relative;
+}
+
+.nav-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-text {
+  font-size: 12px;
+  font-weight: bold;
+  margin-top: 2px;
+  color: white;
+  text-shadow: 0 0 3px #000;
 }
 
 .prev-btn {
@@ -120,7 +147,35 @@
 }
 
 .nav-arrow {
-  width: 25px;
-  height: 25px;
+  width: 20px;
+  height: 20px;
   transition: transform 0.3s ease;
+}
+
+.down-arrow {
+  transform: rotate(180deg);
+}
+
+/* Hotspot icons should remain fixed */
+.fixed-icon {
+  transform: none !important; /* Prevent any transform from happening */
+  transition: none !important; /* Disable transitions */
+}
+
+/* Icon for previous button (pointing down) */
+.down-icon {
+  transform: rotate(180deg) !important; /* Always point down */
+}
+
+/* Make sure the hotspot content doesn't rotate */
+.custom-tooltip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.pnlm-hotspot .custom-tooltip {
+  transform: none !important;
 }

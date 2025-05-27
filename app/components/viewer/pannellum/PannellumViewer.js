@@ -144,29 +144,29 @@ const PannellumViewer = ({
             ? savedViewPosition.hfov
             : selectedImage.properties.initialHfov || 100;
 
-          // Calculate next and previous hotspot yaw values
-          // Next is 270 degrees from initialYaw, Previous is 90 degrees from initialYaw
-          // This ensures they are exactly opposite (180 degrees apart)
-          const nextYaw = (selectedImage.properties.initialYaw + 270) % 360;
-          const prevYaw = (selectedImage.properties.initialYaw + 90) % 360;
+          // Fixed positions for next and prev hotspots
+          // Use constant positions instead of calculating based on initialYaw
+          const nextYaw = 0; // Fixed position for next (forward/up direction)
+          const prevYaw = 180; // Fixed position for prev (backward/down direction)
 
           // Add Next button hotspot if not the last image
           if (currentIndex < images.length - 1) {
             hotSpots.push({
               pitch: 0,
-              yaw: nextYaw, // 270 degrees from initial view
+              yaw: nextYaw,
               type: "custom",
               cssClass: "custom-hotspot next-hotspot",
               createTooltipFunc: (hotSpotDiv) => {
                 hotSpotDiv.classList.add("custom-tooltip");
 
-                // Create SVG element for the icon
+                // Create SVG element for the icon (pointing up)
                 const nextIcon = document.createElement("div");
                 nextIcon.innerHTML = `<svg fill="#fff" height="200px" width="200px" version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 330 330" xml:space="preserve"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path id="XMLID_224_" d="M325.606,229.393l-150.004-150C172.79,76.58,168.974,75,164.996,75c-3.979,0-7.794,1.581-10.607,4.394 l-149.996,150c-5.858,5.858-5.858,15.355,0,21.213c5.857,5.857,15.355,5.858,21.213,0l139.39-139.393l139.397,139.393 C307.322,253.536,311.161,255,315,255c3.839,0,7.678-1.464,10.607-4.394C331.464,244.748,331.464,235.251,325.606,229.393z"></path> </g></svg>`;
-                nextIcon.classList.add("hotspot-icon");
+                nextIcon.classList.add("hotspot-icon", "fixed-icon");
                 hotSpotDiv.appendChild(nextIcon);
 
                 const nextText = document.createElement("span");
+                nextText.textContent = "NEXT";
                 nextText.classList.add("hotspot-text");
                 hotSpotDiv.appendChild(nextText);
 
@@ -183,19 +183,24 @@ const PannellumViewer = ({
           if (currentIndex > 0) {
             hotSpots.push({
               pitch: 0,
-              yaw: prevYaw, // 90 degrees from initial view
+              yaw: prevYaw,
               type: "custom",
               cssClass: "custom-hotspot prev-hotspot",
               createTooltipFunc: (hotSpotDiv) => {
                 hotSpotDiv.classList.add("custom-tooltip");
 
-                // Create SVG element for the icon
+                // Create SVG element for the icon (pointing down)
                 const prevIcon = document.createElement("div");
-                prevIcon.innerHTML = `<svg fill="#fff" height="200px" width="200px" version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 330 330" xml:space="preserve"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path id="XMLID_224_" d="M325.606,229.393l-150.004-150C172.79,76.58,168.974,75,164.996,75c-3.979,0-7.794,1.581-10.607,4.394 l-149.996,150c-5.858,5.858-5.858,15.355,0,21.213c5.857,5.857,15.355,5.858,21.213,0l139.39-139.393l139.397,139.393 C307.322,253.536,311.161,255,315,255c3.839,0,7.678-1.464,10.607-4.394C331.464,244.748,331.464,235.251,325.606,229.393z"></path> </g></svg>`;
-                prevIcon.classList.add("hotspot-icon");
+                prevIcon.innerHTML = `<svg fill="#fff" width="800px" height="800px" viewBox="0 -6 524 524" xmlns="http://www.w3.org/2000/svg" ><title>down</title><path d="M64 191L98 157 262 320 426 157 460 191 262 387 64 191Z" /></svg>`;
+                prevIcon.classList.add(
+                  "hotspot-icon",
+                  "fixed-icon",
+                  "down-icon"
+                );
                 hotSpotDiv.appendChild(prevIcon);
 
                 const prevText = document.createElement("span");
+                prevText.textContent = "PREV";
                 prevText.classList.add("hotspot-text");
                 hotSpotDiv.appendChild(prevText);
 
@@ -305,65 +310,11 @@ const PannellumViewer = ({
   useEffect(() => {
     if (!pannellumInstance || !selectedImage) return;
 
-    // Get the initialYaw value for the current image
-    const initialYaw = selectedImage.properties.initialYaw || 0;
-
-    // Function to update the rotation of navigation arrows based on current view
-    const updateNavigationArrows = () => {
-      const currentYaw = pannellumInstance.getYaw();
-
-      // Get navigation arrows
-      const prevArrow = document.querySelector(".prev-btn .nav-arrow");
-      const nextArrow = document.querySelector(".next-btn .nav-arrow");
-
-      if (prevArrow) {
-        // Opposite direction of initialYaw (180 degrees from initialYaw)
-        const prevDirection = (initialYaw + 180) % 360;
-        // Calculate the angle to make the arrow point to the exact prevDirection regardless of current view
-        prevArrow.style.transform = `rotate(${prevDirection - currentYaw}deg)`;
-      }
-
-      if (nextArrow) {
-        // Use initialYaw directly - the arrow should always point to initialYaw
-        // Calculate the angle to make the arrow point to initialYaw regardless of current view
-        nextArrow.style.transform = `rotate(${initialYaw - currentYaw}deg)`;
-      }
-    };
-
-    // Update arrows immediately
-    updateNavigationArrows();
-
-    // Add event listener to the viewer for updating arrow rotation during movement
-    const handleViewChange = () => {
-      requestAnimationFrame(updateNavigationArrows);
-    };
-
-    pannellumInstance.on("mousedown", handleViewChange);
-    pannellumInstance.on("touchstart", handleViewChange);
-    pannellumInstance.on("mouseup", handleViewChange);
-    pannellumInstance.on("touchend", handleViewChange);
-    pannellumInstance.on("mousemove", handleViewChange);
-    pannellumInstance.on("touchmove", handleViewChange);
-
-    // Update with an interval as well to catch any other view changes
-    const updateInterval = setInterval(updateNavigationArrows, 100);
+    // No need to update arrow orientations since we want them fixed
+    // Cleaning up the previous effect logic that was rotating the arrows
 
     return () => {
-      clearInterval(updateInterval);
-
-      // Remove event listeners
-      if (pannellumInstance) {
-        try {
-          pannellumInstance.off("mousedown", handleViewChange);
-          pannellumInstance.off("touchstart", handleViewChange);
-          pannellumInstance.off("mouseup", handleViewChange);
-          pannellumInstance.off("touchend", handleViewChange);
-          pannellumInstance.off("mousemove", handleViewChange);
-          pannellumInstance.off("touchmove", handleViewChange);
-        } catch (error) {
-          console.error("Error removing event listeners:", error);
-        }
-      }
+      // Clean up only needed for potential event listeners if added later
     };
   }, [pannellumInstance, selectedImage]);
 
@@ -393,52 +344,60 @@ const PannellumViewer = ({
       {/* Fixed Navigation Controls */}
       {pannellumInstance && selectedImage && (
         <div className='fixed-nav-controls'>
-          {images.findIndex(
-            (img) => img.properties.id === selectedImage?.properties.id
-          ) > 0 && (
-            <button
-              className='nav-btn prev-btn'
-              onClick={() => {
-                saveCurrentViewPosition();
-                onPrevImage();
-              }}
-              aria-label='Previous image'
-            >
-              <svg
-                className='nav-arrow'
-                fill='#fff'
-                height='30px'
-                width='30px'
-                viewBox='0 0 330 330'
+          <div className='vertical-nav-buttons'>
+            {images.findIndex(
+              (img) => img.properties.id === selectedImage?.properties.id
+            ) <
+              images.length - 1 && (
+              <button
+                className='nav-btn next-btn'
+                onClick={() => {
+                  saveCurrentViewPosition();
+                  onNextImage();
+                }}
+                aria-label='Next image'
               >
-                <path d='M325.606,229.393l-150.004-150C172.79,76.58,168.974,75,164.996,75c-3.979,0-7.794,1.581-10.607,4.394 l-149.996,150c-5.858,5.858-5.858,15.355,0,21.213c5.857,5.857,15.355,5.858,21.213,0l139.39-139.393l139.397,139.393 C307.322,253.536,311.161,255,315,255c3.839,0,7.678-1.464,10.607-4.394C331.464,244.748,331.464,235.251,325.606,229.393z' />
-              </svg>
-            </button>
-          )}
+                <div className='nav-content'>
+                  <svg
+                    className='nav-arrow'
+                    fill='#fff'
+                    height='24px'
+                    width='24px'
+                    viewBox='0 0 330 330'
+                  >
+                    <path d='M325.606,229.393l-150.004-150C172.79,76.58,168.974,75,164.996,75c-3.979,0-7.794,1.581-10.607,4.394 l-149.996,150c-5.858,5.858-5.858,15.355,0,21.213c5.857,5.857,15.355,5.858,21.213,0l139.39-139.393l139.397,139.393 C307.322,253.536,311.161,255,315,255c3.839,0,7.678-1.464,10.607-4.394C331.464,244.748,331.464,235.251,325.606,229.393z' />
+                  </svg>
+                  <span className='nav-text'>NEXT</span>
+                </div>
+              </button>
+            )}
 
-          {images.findIndex(
-            (img) => img.properties.id === selectedImage?.properties.id
-          ) <
-            images.length - 1 && (
-            <button
-              className='nav-btn next-btn'
-              onClick={() => {
-                saveCurrentViewPosition();
-                onNextImage();
-              }}
-              aria-label='Next image'
-            >
-              <svg
-                className='nav-arrow'
-                fill='#fff'
-                height='30px'
-                width='30px'
-                viewBox='0 0 330 330'
+            {images.findIndex(
+              (img) => img.properties.id === selectedImage?.properties.id
+            ) > 0 && (
+              <button
+                className='nav-btn prev-btn'
+                onClick={() => {
+                  saveCurrentViewPosition();
+                  onPrevImage();
+                }}
+                aria-label='Previous image'
               >
-                <path d='M325.606,229.393l-150.004-150C172.79,76.58,168.974,75,164.996,75c-3.979,0-7.794,1.581-10.607,4.394 l-149.996,150c-5.858,5.858-5.858,15.355,0,21.213c5.857,5.857,15.355,5.858,21.213,0l139.39-139.393l139.397,139.393 C307.322,253.536,311.161,255,315,255c3.839,0,7.678-1.464,10.607-4.394C331.464,244.748,331.464,235.251,325.606,229.393z' />
-              </svg>
-            </button>
-          )}
+                <div className='nav-content'>
+                  <svg
+                    className='nav-arrow down-arrow'
+                    fill='#fff'
+                    height='24px'
+                    width='24px'
+                    viewBox='0 0 330 330'
+                  >
+                    <path d='M325.606,229.393l-150.004-150C172.79,76.58,168.974,75,164.996,75c-3.979,0-7.794,1.581-10.607,4.394 l-149.996,150c-5.858,5.858-5.858,15.355,0,21.213c5.857,5.857,15.355,5.858,21.213,0l139.39-139.393l139.397,139.393 C307.322,253.536,311.161,255,315,255c3.839,0,7.678-1.464,10.607-4.394C331.464,244.748,331.464,235.251,325.606,229.393z' />
+                  </svg>
+                  <span className='nav-text'>PREV</span>
+                </div>
+              </button>
+            )}
+          </div>
         </div>
       )}
     </>
