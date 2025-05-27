@@ -1,26 +1,13 @@
 // Next.js API route to proxy requests to the local API server
 // and avoid CORS issues
 
-// Helper function to ensure image URLs are properly formatted
+// Helper function to return image URLs through our proxy
 const formatImageUrl = (url) => {
   if (!url) return "";
 
-  // If URL already contains /api/proxy/, leave it as is
-  if (url.includes("/api/proxy/")) {
-    return url;
-  }
-
-  // Replace the server URL with our proxy
-  if (url.includes("192.168.68.112:8000")) {
-    return url.replace("http://192.168.68.112:8000/", "/api/proxy/");
-  }
-
-  // If it's a relative path, make sure it uses the proxy
-  if (!url.startsWith("http://") && !url.startsWith("https://")) {
-    return `/api/proxy/${url.startsWith("/") ? url.substring(1) : url}`;
-  }
-
-  return url;
+  // Use our proxy route to avoid CORS issues
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || "";
+  return `${baseUrl}/api/proxy?url=${encodeURIComponent(url)}`;
 };
 
 export async function GET() {
