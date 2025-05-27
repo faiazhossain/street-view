@@ -121,7 +121,7 @@ export function useImageData() {
           const features = sortedData.map((item) => {
             // Handle different image URL formats
             const imageUrl =
-              item.image_url_high || item.imageUrl_High || item.image_url || "";
+              item.image_url_comp || item.imageUrl_High || item.image_url || "";
 
             return {
               type: "Feature",
@@ -132,7 +132,7 @@ export function useImageData() {
                   "/api/proxy/"
                 ),
                 imageUrl_High: (
-                  item.image_url_high ||
+                  item.image_url_comp ||
                   item.imageUrl_High ||
                   ""
                 ).replace("http://192.168.68.112:8000/", "/api/proxy/"),

@@ -64,10 +64,10 @@ export async function GET() {
               item.id ||
               `feature-${Math.random().toString(36).substring(2, 9)}`,
             imageUrl: formatImageUrl(
-              item.image_url_high || item.imageUrl_High || item.image_url || ""
+              item.image_url_comp || item.imageUrl_High || item.image_url || ""
             ),
             imageUrl_High: formatImageUrl(
-              item.image_url_high || item.imageUrl_High || ""
+              item.image_url_comp || item.imageUrl_High || ""
             ),
             imageUrl_Comp: formatImageUrl(
               item.image_url_comp || item.imageUrl_Comp || ""
@@ -104,10 +104,10 @@ export async function GET() {
             item.id ||
             `feature-${Math.random().toString(36).substring(2, 9)}`,
           imageUrl: formatImageUrl(
-            item.image_url_high || item.imageUrl_High || item.image_url || ""
+            item.image_url_comp || item.imageUrl_High || item.image_url || ""
           ),
           imageUrl_High: formatImageUrl(
-            item.image_url_high || item.imageUrl_High || ""
+            item.image_url_comp || item.imageUrl_High || ""
           ),
           imageUrl_Comp: formatImageUrl(
             item.image_url_comp || item.imageUrl_Comp || ""
