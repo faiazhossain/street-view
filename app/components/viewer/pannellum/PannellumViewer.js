@@ -301,6 +301,72 @@ const PannellumViewer = ({
     };
   }, [pannellumInstance, selectedImage?.properties?.id]);
 
+  // Update navigation buttons based on viewer orientation
+  useEffect(() => {
+    if (!pannellumInstance || !selectedImage) return;
+
+    // Get the initialYaw value for the current image
+    const initialYaw = selectedImage.properties.initialYaw || 0;
+
+    // Function to update the rotation of navigation arrows based on current view
+    const updateNavigationArrows = () => {
+      const currentYaw = pannellumInstance.getYaw();
+
+      // Get navigation arrows
+      const prevArrow = document.querySelector(".prev-btn .nav-arrow");
+      const nextArrow = document.querySelector(".next-btn .nav-arrow");
+
+      if (prevArrow) {
+        // Opposite direction of initialYaw (180 degrees from initialYaw)
+        const prevDirection = (initialYaw + 180) % 360;
+        // Calculate the angle to make the arrow point to the exact prevDirection regardless of current view
+        prevArrow.style.transform = `rotate(${prevDirection - currentYaw}deg)`;
+      }
+
+      if (nextArrow) {
+        // Use initialYaw directly - the arrow should always point to initialYaw
+        // Calculate the angle to make the arrow point to initialYaw regardless of current view
+        nextArrow.style.transform = `rotate(${initialYaw - currentYaw}deg)`;
+      }
+    };
+
+    // Update arrows immediately
+    updateNavigationArrows();
+
+    // Add event listener to the viewer for updating arrow rotation during movement
+    const handleViewChange = () => {
+      requestAnimationFrame(updateNavigationArrows);
+    };
+
+    pannellumInstance.on("mousedown", handleViewChange);
+    pannellumInstance.on("touchstart", handleViewChange);
+    pannellumInstance.on("mouseup", handleViewChange);
+    pannellumInstance.on("touchend", handleViewChange);
+    pannellumInstance.on("mousemove", handleViewChange);
+    pannellumInstance.on("touchmove", handleViewChange);
+
+    // Update with an interval as well to catch any other view changes
+    const updateInterval = setInterval(updateNavigationArrows, 100);
+
+    return () => {
+      clearInterval(updateInterval);
+
+      // Remove event listeners
+      if (pannellumInstance) {
+        try {
+          pannellumInstance.off("mousedown", handleViewChange);
+          pannellumInstance.off("touchstart", handleViewChange);
+          pannellumInstance.off("mouseup", handleViewChange);
+          pannellumInstance.off("touchend", handleViewChange);
+          pannellumInstance.off("mousemove", handleViewChange);
+          pannellumInstance.off("touchmove", handleViewChange);
+        } catch (error) {
+          console.error("Error removing event listeners:", error);
+        }
+      }
+    };
+  }, [pannellumInstance, selectedImage]);
+
   // Final cleanup on component unmount
   useEffect(() => {
     return () => {
@@ -323,6 +389,58 @@ const PannellumViewer = ({
 
       {/* Pannellum viewer container with dynamic ID */}
       <div id={viewerId.current} ref={viewerRef} className='w-full h-full' />
+
+      {/* Fixed Navigation Controls */}
+      {pannellumInstance && selectedImage && (
+        <div className='fixed-nav-controls'>
+          {images.findIndex(
+            (img) => img.properties.id === selectedImage?.properties.id
+          ) > 0 && (
+            <button
+              className='nav-btn prev-btn'
+              onClick={() => {
+                saveCurrentViewPosition();
+                onPrevImage();
+              }}
+              aria-label='Previous image'
+            >
+              <svg
+                className='nav-arrow'
+                fill='#fff'
+                height='30px'
+                width='30px'
+                viewBox='0 0 330 330'
+              >
+                <path d='M325.606,229.393l-150.004-150C172.79,76.58,168.974,75,164.996,75c-3.979,0-7.794,1.581-10.607,4.394 l-149.996,150c-5.858,5.858-5.858,15.355,0,21.213c5.857,5.857,15.355,5.858,21.213,0l139.39-139.393l139.397,139.393 C307.322,253.536,311.161,255,315,255c3.839,0,7.678-1.464,10.607-4.394C331.464,244.748,331.464,235.251,325.606,229.393z' />
+              </svg>
+            </button>
+          )}
+
+          {images.findIndex(
+            (img) => img.properties.id === selectedImage?.properties.id
+          ) <
+            images.length - 1 && (
+            <button
+              className='nav-btn next-btn'
+              onClick={() => {
+                saveCurrentViewPosition();
+                onNextImage();
+              }}
+              aria-label='Next image'
+            >
+              <svg
+                className='nav-arrow'
+                fill='#fff'
+                height='30px'
+                width='30px'
+                viewBox='0 0 330 330'
+              >
+                <path d='M325.606,229.393l-150.004-150C172.79,76.58,168.974,75,164.996,75c-3.979,0-7.794,1.581-10.607,4.394 l-149.996,150c-5.858,5.858-5.858,15.355,0,21.213c5.857,5.857,15.355,5.858,21.213,0l139.39-139.393l139.397,139.393 C307.322,253.536,311.161,255,315,255c3.839,0,7.678-1.464,10.607-4.394C331.464,244.748,331.464,235.251,325.606,229.393z' />
+              </svg>
+            </button>
+          )}
+        </div>
+      )}
     </>
   );
 };

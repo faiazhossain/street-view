@@ -75,3 +75,52 @@
 .pnlm-container .pnlm-hotspot {
   opacity: 1 !important;
 }
+
+/* Fixed navigation controls */
+.fixed-nav-controls {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 20px;
+  z-index: 100;
+  pointer-events: auto;
+}
+
+.nav-btn {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 2px solid rgba(255, 255, 255, 0.7);
+}
+
+.prev-btn {
+  background: rgba(0, 255, 47, 0.6);
+}
+
+.prev-btn:hover {
+  background: rgba(0, 255, 47, 0.9);
+  transform: scale(1.1);
+}
+
+.next-btn {
+  background: rgba(0, 120, 255, 0.6);
+}
+
+.next-btn:hover {
+  background: rgba(0, 120, 255, 0.9);
+  transform: scale(1.1);
+}
+
+.nav-arrow {
+  width: 25px;
+  height: 25px;
+  transition: transform 0.3s ease;
+}
