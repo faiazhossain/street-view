@@ -5,7 +5,20 @@
 const formatImageUrl = (url) => {
   if (!url) return "";
 
-  // Use our proxy route to avoid CORS issues
+  // For absolute URLs with IP addresses like http://202.72.236.166:8001/track0/0_1.jpg
+  if (
+    url.includes("192.168.68.112:8000") ||
+    url.includes("192.168.68.183:8001")
+  ) {
+    // Extract path after the domain/port
+    const urlParts = url.split("/");
+    const pathParts = urlParts.slice(3); // Skip http:, '', and domain:port
+    const path = pathParts.join("/");
+
+    return `/api/proxy/${path}`;
+  }
+
+  // Use our proxy route to avoid CORS issues if not already formatted
   const baseUrl = process.env.NEXT_PUBLIC_API_URL || "";
   return `${baseUrl}/api/proxy?url=${encodeURIComponent(url)}`;
 };
@@ -13,7 +26,7 @@ const formatImageUrl = (url) => {
 export async function GET() {
   try {
     // Make the request to your local API server
-    const response = await fetch("http://192.168.68.112:8000/api/features", {
+    const response = await fetch("http://202.72.236.166:8001/api/features", {
       headers: {
         "Content-Type": "application/json",
       },

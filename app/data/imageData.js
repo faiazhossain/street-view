@@ -52,21 +52,24 @@ export function useImageData() {
             result.features.forEach((feature) => {
               const id = feature.properties.id;
               // Extract track name using regex (e.g., "track0" from "img_track0_265")
-              const trackMatch = id.match(/img_([^_]+)/);
+              const trackMatch = id?.match(/img_([^_]+)/);
 
+              // New format handling for IDs like "0_1" - extract the first part as track
+              const newFormatMatch = id?.match(/^(\d+)_\d+$/);
+
+              let trackName;
               if (trackMatch) {
-                const trackName = trackMatch[1]; // This will be "track0", "track1", etc.
-                if (!trackGroups[trackName]) {
-                  trackGroups[trackName] = [];
-                }
-                trackGroups[trackName].push(feature);
+                trackName = trackMatch[1]; // Old format: "track0", "track1", etc.
+              } else if (newFormatMatch) {
+                trackName = "track" + newFormatMatch[1]; // New format: convert "0_1" to "track0"
               } else {
-                // If no track match, put in default group
-                if (!trackGroups["default"]) {
-                  trackGroups["default"] = [];
-                }
-                trackGroups[trackName].push(feature);
+                trackName = "default"; // Fallback
               }
+
+              if (!trackGroups[trackName]) {
+                trackGroups[trackName] = [];
+              }
+              trackGroups[trackName].push(feature);
             });
 
             // Create path GeoJSON with multiple LineStrings (one per track)
@@ -76,13 +79,29 @@ export function useImageData() {
                 // Sort features by ID before creating the path
                 const sortedFeatures = [...trackGroups[trackName]].sort(
                   (a, b) => {
-                    // Extract the numeric part from id (img_track0_265, etc.)
-                    const numA = parseInt(
-                      a.properties.id.match(/_(\d+)$/)?.[1] || 0
-                    );
-                    const numB = parseInt(
-                      b.properties.id.match(/_(\d+)$/)?.[1] || 0
-                    );
+                    let numA, numB;
+
+                    if (a.properties.id?.includes("_")) {
+                      // Handle both formats: img_track0_265 or 0_1
+                      numA = parseInt(
+                        a.properties.id.match(/_(\d+)$/)?.[1] ||
+                          a.properties.id.split("_")[1] ||
+                          0
+                      );
+                    } else {
+                      numA = parseInt(a.properties.id?.replace(/\D/g, "") || 0);
+                    }
+
+                    if (b.properties.id?.includes("_")) {
+                      numB = parseInt(
+                        b.properties.id.match(/_(\d+)$/)?.[1] ||
+                          b.properties.id.split("_")[1] ||
+                          0
+                      );
+                    } else {
+                      numB = parseInt(b.properties.id?.replace(/\D/g, "") || 0);
+                    }
+
                     return numA - numB;
                   }
                 );
@@ -120,27 +139,35 @@ export function useImageData() {
           // Transform API data into GeoJSON format
           const features = sortedData.map((item) => {
             // Handle different image URL formats
-            const imageUrl =
+            let imageUrl =
               item.image_url_comp || item.imageUrl_High || item.image_url || "";
+
+            // For the new format with image_url_high and image_url_comp fields
+            if (item.image_url_high) {
+              imageUrl = item.image_url_high;
+            }
+
+            // Handle different server URLs - replace both old and new server IPs
+            const proxyImageUrl = imageUrl
+              .replace("http://202.72.236.166:8001/", "/api/proxy/")
+              .replace("http://202.72.236.166:8001/", "/api/proxy/");
 
             return {
               type: "Feature",
               properties: {
                 id: item.feature_id || item.id,
-                imageUrl: imageUrl.replace(
-                  "http://192.168.68.112:8000/",
-                  "/api/proxy/"
-                ),
+                imageUrl: proxyImageUrl,
                 imageUrl_High: (
+                  item.image_url_high ||
                   item.image_url_comp ||
                   item.imageUrl_High ||
                   ""
-                ).replace("http://192.168.68.112:8000/", "/api/proxy/"),
-                imageUrl_Comp: (
-                  item.image_url_comp ||
-                  item.imageUrl_Comp ||
-                  ""
-                ).replace("http://192.168.68.112:8000/", "/api/proxy/"),
+                )
+                  .replace("http://202.72.236.166:8001/", "/api/proxy/")
+                  .replace("http://202.72.236.166:8001/", "/api/proxy/"),
+                imageUrl_Comp: (item.image_url_comp || item.imageUrl_Comp || "")
+                  .replace("http://202.72.236.166:8001/", "/api/proxy/")
+                  .replace("http://202.72.236.166:8001/", "/api/proxy/"),
                 initialYaw: item.initial_yaw || item.initialYaw || 0,
                 initialPitch: item.initial_pitch || item.initialPitch || 0,
                 initialHfov: item.initial_hfov || item.initialHfov || 100,
@@ -170,21 +197,24 @@ export function useImageData() {
           features.forEach((feature) => {
             const id = feature.properties.id;
             // Extract track name using regex (e.g., "track0" from "img_track0_265")
-            const trackMatch = id.match(/img_([^_]+)/);
+            const trackMatch = id?.match(/img_([^_]+)/);
 
+            // New format handling for IDs like "0_1" - extract the first part as track
+            const newFormatMatch = id?.match(/^(\d+)_\d+$/);
+
+            let trackName;
             if (trackMatch) {
-              const trackName = trackMatch[1]; // This will be "track0", "track1", etc.
-              if (!trackGroups[trackName]) {
-                trackGroups[trackName] = [];
-              }
-              trackGroups[trackName].push(feature);
+              trackName = trackMatch[1]; // Old format: "track0", "track1", etc.
+            } else if (newFormatMatch) {
+              trackName = "track" + newFormatMatch[1]; // New format: convert "0_1" to "track0"
             } else {
-              // If no track match, put in default group
-              if (!trackGroups["default"]) {
-                trackGroups["default"] = [];
-              }
-              trackGroups["default"].push(feature);
+              trackName = "default"; // Fallback
             }
+
+            if (!trackGroups[trackName]) {
+              trackGroups[trackName] = [];
+            }
+            trackGroups[trackName].push(feature);
           });
 
           // Create path GeoJSON with multiple LineStrings (one per track)
@@ -194,13 +224,29 @@ export function useImageData() {
               // Sort features by ID before creating the path
               const sortedFeatures = [...trackGroups[trackName]].sort(
                 (a, b) => {
-                  // Extract numeric part from id
-                  const numA = parseInt(
-                    a.properties.id.match(/_(\d+)$/)?.[1] || 0
-                  );
-                  const numB = parseInt(
-                    b.properties.id.match(/_(\d+)$/)?.[1] || 0
-                  );
+                  let numA, numB;
+
+                  if (a.properties.id?.includes("_")) {
+                    // Handle both formats: img_track0_265 or 0_1
+                    numA = parseInt(
+                      a.properties.id.match(/_(\d+)$/)?.[1] ||
+                        a.properties.id.split("_")[1] ||
+                        0
+                    );
+                  } else {
+                    numA = parseInt(a.properties.id?.replace(/\D/g, "") || 0);
+                  }
+
+                  if (b.properties.id?.includes("_")) {
+                    numB = parseInt(
+                      b.properties.id.match(/_(\d+)$/)?.[1] ||
+                        b.properties.id.split("_")[1] ||
+                        0
+                    );
+                  } else {
+                    numB = parseInt(b.properties.id?.replace(/\D/g, "") || 0);
+                  }
+
                   return numA - numB;
                 }
               );

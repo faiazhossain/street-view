@@ -9,13 +9,24 @@ export async function GET(request, { params }) {
     // Reconstruct the path
     const fullPath = path.join("/");
 
-    // Create the URL to the local server
-    const url = `http://192.168.68.112:8000/${fullPath}`;
+    // Extract the requested server IP from the URL query parameters
+    const url = new URL(request.url);
 
-    console.log(`Proxying request to: ${url}`);
+    // Default to the new server IP address
+    const serverIp = url.searchParams.get("server") || "192.168.68.183:8001";
 
-    // Make the request to the local server
-    const response = await fetch(url);
+    // Create the URL to the appropriate local server
+    const proxyUrl = `http://${serverIp}/${fullPath}`;
+
+    console.log(`Proxying request to: ${proxyUrl}`);
+
+    // Make the request to the local server with a reasonable timeout
+    const response = await fetch(proxyUrl, {
+      timeout: 10000,
+      headers: {
+        "Cache-Control": "no-cache",
+      },
+    });
 
     if (!response.ok) {
       throw new Error(
@@ -35,6 +46,9 @@ export async function GET(request, { params }) {
       headers: {
         "Content-Type": contentType,
         "Cache-Control": "public, max-age=3600", // Cache for 1 hour
+        // Set CORS headers to ensure browser can use the image
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, OPTIONS",
       },
     });
   } catch (error) {

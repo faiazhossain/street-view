@@ -43,57 +43,72 @@ const MapComponent = ({
     // Process each image
     imageData.features.forEach((feature) => {
       const id = feature.properties.id;
+
+      // Determine track name:
+      // 1. For format like "img_track0_265" - extract "track0"
+      // 2. For format like "0_1" - convert to "track0"
+      // 3. Fallback to default
+      let trackName;
+
       // Extract track name using regex (e.g., "track0" from "img_track0_265")
-      const trackMatch = id.match(/img_([^_]+)/);
+      const trackMatch = id?.match(/img_([^_]+)/);
+
+      // New format handling for IDs like "0_1" - extract the first part as track
+      const newFormatMatch = id?.match(/^(\d+)_\d+$/);
 
       if (trackMatch) {
-        const trackName = trackMatch[1]; // This will be "track0", "track1", etc.
-
-        // Initialize track group if first time seeing this track
-        if (!groups[trackName]) {
-          groups[trackName] = {
-            features: [],
-            color: getTrackColor(trackName), // Get a unique color for each track
-            path: {
-              type: "Feature",
-              properties: {},
-              geometry: {
-                type: "LineString",
-                coordinates: [],
-              },
-            },
-          };
-        }
-
-        // Add feature to track group
-        groups[trackName].features.push(feature);
+        trackName = trackMatch[1]; // This will be "track0", "track1", etc.
+      } else if (newFormatMatch) {
+        trackName = "track" + newFormatMatch[1]; // Convert "0_1" to "track0"
       } else {
-        // Handle images without expected track format (fallback)
-        if (!groups["default"]) {
-          groups["default"] = {
-            features: [],
-            color: "#0080ff", // Default color
-            path: {
-              type: "Feature",
-              properties: {},
-              geometry: {
-                type: "LineString",
-                coordinates: [],
-              },
-            },
-          };
-        }
-        groups["default"].features.push(feature);
+        trackName = "default"; // Fallback name
       }
+
+      // Initialize track group if first time seeing this track
+      if (!groups[trackName]) {
+        groups[trackName] = {
+          features: [],
+          color: getTrackColor(trackName), // Get a unique color for each track
+          path: {
+            type: "Feature",
+            properties: {},
+            geometry: {
+              type: "LineString",
+              coordinates: [],
+            },
+          },
+        };
+      }
+
+      // Add feature to track group
+      groups[trackName].features.push(feature);
     });
 
     // Create path LineString for each track
     Object.keys(groups).forEach((trackName) => {
       // Sort features by ID if needed for proper path order
       const sortedFeatures = [...groups[trackName].features].sort((a, b) => {
-        // Extract the numeric part from id (img_track0_265, etc.)
-        const numA = parseInt(a.properties.id.match(/_(\d+)$/)?.[1] || 0);
-        const numB = parseInt(b.properties.id.match(/_(\d+)$/)?.[1] || 0);
+        let numA, numB;
+        const id_a = a.properties.id;
+        const id_b = b.properties.id;
+
+        if (id_a?.includes("_")) {
+          // Handle both formats: img_track0_265 or 0_1
+          numA = parseInt(
+            id_a.match(/_(\d+)$/)?.[1] || id_a.split("_")[1] || 0
+          );
+        } else {
+          numA = parseInt(id_a?.replace(/\D/g, "") || 0);
+        }
+
+        if (id_b?.includes("_")) {
+          numB = parseInt(
+            id_b.match(/_(\d+)$/)?.[1] || id_b.split("_")[1] || 0
+          );
+        } else {
+          numB = parseInt(id_b?.replace(/\D/g, "") || 0);
+        }
+
         return numA - numB;
       });
 

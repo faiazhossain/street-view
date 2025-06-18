@@ -11,10 +11,27 @@ import {
 // Create a ref that persists across component mounts to track script loading
 let scriptLoadedGlobal = false;
 
-// Helper function to return image URLs without modification
+// Helper function to properly process image URLs
 const processImageUrl = (url) => {
-  // Simply return the URL as is, without modifications
-  return url || "";
+  if (!url) return "";
+
+  // If the URL already starts with /api/proxy/, don't modify it
+  if (url.startsWith("/api/proxy/")) {
+    return url;
+  }
+
+  // For absolute URLs with the IP addresses, use the path-based proxy
+  if (url.includes("192.168.68.112:8000") || url.includes("192.168.68.183:8001")) {
+    // Extract path after the domain/port
+    const urlParts = url.split("/");
+    const pathParts = urlParts.slice(3); // Skip http:, '', and domain:port
+    const path = pathParts.join("/");
+
+    return `/api/proxy/${path}`;
+  }
+
+  // For other URLs, use as is
+  return url;
 };
 
 const PannellumViewer = ({
