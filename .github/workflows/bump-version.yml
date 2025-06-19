@@ -1,0 +1,35 @@
+name: Bump Version
+
+on:
+  workflow_dispatch:
+    inputs:
+      new_version:
+        description: "New version number (e.g., 1.0.6)"
+        required: true
+        type: string
+
+jobs:
+  bump-version:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update version in package.json
+        run: |
+          # Get the new version from input
+          NEW_VERSION="${{ github.event.inputs.new_version }}"
+
+          # Update package.json with the new version
+          sed -i "s/\"version\": \".*\"/\"version\": \"$NEW_VERSION\"/" package.json
+
+          # Configure git
+          git config --global user.name 'GitHub Action'
+          git config --global user.email 'action@github.com'
+
+          # Commit and push the changes
+          git add package.json
+          git commit -m "Bump version to $NEW_VERSION"
+          git push origin main
