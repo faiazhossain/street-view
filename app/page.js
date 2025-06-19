@@ -49,10 +49,7 @@ export default function Home() {
 
   if (isLoading) {
     return (
-      <PageLayout
-        title='Personal Street View'
-        description='Loading street view data...'
-      >
+      <PageLayout title='ThirdEye360' description='Loading ThirdEye360 data...'>
         <div className='flex items-center justify-center h-64'>
           <div className='animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500'></div>
         </div>
@@ -62,7 +59,7 @@ export default function Home() {
 
   if (error) {
     return (
-      <PageLayout title='Personal Street View' description='Error loading data'>
+      <PageLayout title='ThirdEye360' description='Error loading data'>
         <div className='text-red-500 p-4 border border-red-300 rounded-md'>
           <h2 className='text-lg font-semibold mb-2'>Error loading data</h2>
           <p>{error}</p>
@@ -73,7 +70,7 @@ export default function Home() {
 
   return (
     <PageLayout
-      title='Personal Street View'
+      title='ThirdEye360'
       description='Click on any point along the path to view the 360° image at that location. Navigate between images using the previous and next buttons.'
     >
       {imageData.features.length > 0 ? (

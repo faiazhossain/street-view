@@ -1,4 +1,4 @@
-// Navigation utilities for the street view app
+// Navigation utilities for the ThirdEye360 app
 
 /**
  * Get the next or previous image based on current image ID
@@ -36,19 +36,19 @@ export const useKeyboardNavigation = (
   handleClose,
   isActive
 ) => {
-  if (typeof window === 'undefined') return;
+  if (typeof window === "undefined") return;
 
   const handleKeyDown = (e) => {
     if (!isActive) return;
 
     switch (e.key) {
-      case 'ArrowLeft':
+      case "ArrowLeft":
         handlePrev();
         break;
-      case 'ArrowRight':
+      case "ArrowRight":
         handleNext();
         break;
-      case 'Escape':
+      case "Escape":
         handleClose();
         break;
       default:
@@ -57,10 +57,10 @@ export const useKeyboardNavigation = (
   };
 
   // Add the event listener
-  window.addEventListener('keydown', handleKeyDown);
+  window.addEventListener("keydown", handleKeyDown);
 
   // Return a cleanup function
   return () => {
-    window.removeEventListener('keydown', handleKeyDown);
+    window.removeEventListener("keydown", handleKeyDown);
   };
 };

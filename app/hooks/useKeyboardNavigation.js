@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useEffect } from 'react';
+import { useEffect } from "react";
 
 /**
- * Custom hook to handle keyboard navigation for the street view images
+ * Custom hook to handle keyboard navigation for the ThirdEye360 images
  *
  * @param {Object} options - Navigation options
  * @param {Function} options.onPrev - Function to call when navigating to previous image
@@ -22,13 +22,13 @@ export const useKeyboardNavigation = ({
 
     const handleKeyDown = (event) => {
       switch (event.key) {
-        case 'ArrowLeft':
+        case "ArrowLeft":
           onPrev && onPrev();
           break;
-        case 'ArrowRight':
+        case "ArrowRight":
           onNext && onNext();
           break;
-        case 'Escape':
+        case "Escape":
           onClose && onClose();
           break;
         default:
@@ -36,10 +36,10 @@ export const useKeyboardNavigation = ({
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
 
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener("keydown", handleKeyDown);
     };
   }, [onPrev, onNext, onClose, isActive]);
 };
