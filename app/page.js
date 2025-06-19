@@ -88,9 +88,12 @@ export default function Home() {
             <ImageViewer
               selectedImage={selectedImage}
               images={imageData.features}
+              imageData={imageData}
+              pathData={imagePath}
               onPrevImage={handlePrevImage}
               onNextImage={handleNextImage}
               onClose={handleCloseViewer}
+              onImageSelect={handleImageSelect}
             />
           )}
         </>

@@ -5,6 +5,7 @@ import { useKeyboardNavigation } from "../../hooks/useKeyboardNavigation";
 import PannellumViewer from "./pannellum/PannellumViewer";
 import ViewerHeader from "./ViewerHeader";
 import ViewerFooter from "./ViewerFooter";
+import MapComponent from "../MapComponent";
 import "../../styles/pannellum-hotspots.css";
 
 const ImageViewer = ({
@@ -13,13 +14,22 @@ const ImageViewer = ({
   onPrevImage,
   onNextImage,
   onClose,
+  imageData,
+  pathData,
+  onImageSelect,
 }) => {
   const [isAutoPlaying, setIsAutoPlaying] = useState(false);
+  const [showMiniMap, setShowMiniMap] = useState(true);
   const timerRef = useRef(null);
 
   // Toggle auto-play functionality
   const toggleAutoPlay = () => {
     setIsAutoPlaying((prev) => !prev);
+  };
+
+  // Toggle mini-map visibility
+  const toggleMiniMap = () => {
+    setShowMiniMap((prev) => !prev);
   };
 
   // Start or stop the auto-play timer based on isAutoPlaying state
@@ -68,6 +78,36 @@ const ImageViewer = ({
             onPrevImage={onPrevImage}
             onNextImage={onNextImage}
           />
+
+          {/* Mini Map in bottom-left corner */}
+          {showMiniMap && (
+            <div className='absolute bottom-4 left-4 w-64 h-48 z-10 rounded-lg overflow-hidden shadow-lg border-2 border-black'>
+              <MapComponent
+                imageData={{ features: images }}
+                pathData={pathData}
+                selectedImageId={selectedImage.properties.id}
+                onImageSelect={onImageSelect}
+              />
+              <button
+                onClick={toggleMiniMap}
+                className='absolute top-2 right-2 bg-black bg-opacity-80 rounded-full p-1 w-6 h-6 flex items-center justify-center text-sm font-bold'
+                title='Hide mini map'
+              >
+                ×
+              </button>
+            </div>
+          )}
+
+          {/* Show mini-map toggle button when map is hidden */}
+          {!showMiniMap && (
+            <button
+              onClick={toggleMiniMap}
+              className='absolute bottom-4 left-4 bg-black bg-opacity-80 rounded-md px-2 py-1 text-sm shadow-lg'
+              title='Show mini map'
+            >
+              Show Map
+            </button>
+          )}
         </div>
 
         <ViewerFooter
