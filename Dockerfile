@@ -1,41 +1,55 @@
-# Base on Node.js LTS (Long Term Support) version
-FROM node:20-alpine AS builder
+# Stage 1: Install dependencies
+FROM --platform=linux/amd64 node:18-alpine AS deps
 
-# Set working directory
+# Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine to understand why libc6-compat might be needed.
+RUN apk add --no-cache libc6-compat
+
 WORKDIR /app
 
-# Copy package.json and package-lock.json (if available)
-COPY package*.json ./
+COPY package.json package-lock.json ./
 
-# Install dependencies
+ENV SKIP_HUSKY=1
+
 RUN npm ci
 
-# Copy all project files
-COPY . .
+# Stage 2: Rebuilds the source code, sets environment variables, and runs the production build
+FROM --platform=linux/amd64 node:18-alpine AS builder
 
-# Build the application
-RUN npm run build
-
-# Production stage
-FROM node:20-alpine AS runner
 WORKDIR /app
 
-# Set to production environment
-ENV NODE_ENV production
+COPY . .
+COPY --from=deps /app/node_modules ./node_modules
 
-# Don't run production as root
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
+ENV NEXT_PUBLIC_API_URL=NEXT_PUBLIC_API_URL
+ENV NEXT_TELEMETRY_DISABLED=1
+
+RUN npm run build
+
+# Stage 3: Production image, copy all the files and run next
+FROM --platform=linux/amd64 node:18-alpine AS runner
+
+WORKDIR /app
+
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Copy only necessary files
+COPY --from=builder /app/package.json .
+COPY --from=builder /app/package-lock.json .
+COPY --from=builder /app/entrypoint.sh .
+COPY --from=builder /app/next.config.mjs ./
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+
+# Set up permissions and user
+RUN chmod +x /app/entrypoint.sh \
+    && addgroup -S nodejs -g 1001 \
+    && adduser -S nextjs -u 1001 \
+    && chown -R nextjs:nodejs /app
+
 USER nextjs
 
-# Copy necessary files from builder stage
-COPY --from=builder --chown=nextjs:nodejs /app/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
-COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
-
-# Start Next.js application
-CMD ["npm", "start"]
-
-# Expose port 3000 for the application
 EXPOSE 3000
+
+ENTRYPOINT ["/app/entrypoint.sh"]
+CMD ["node", "server.js"]

@@ -13,7 +13,7 @@ export async function GET(request, { params }) {
     const url = new URL(request.url);
 
     // Default to the new server IP address
-    const serverIp = url.searchParams.get("server") || "192.168.68.183:8001";
+    const serverIp = url.searchParams.get("server") || "202.72.236.166:8001";
 
     // Create the URL to the appropriate local server
     const proxyUrl = `http://${serverIp}/${fullPath}`;

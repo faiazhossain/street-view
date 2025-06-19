@@ -7,8 +7,8 @@ const formatImageUrl = (url) => {
 
   // For absolute URLs with IP addresses like http://202.72.236.166:8001/track0/0_1.jpg
   if (
-    url.includes("192.168.68.112:8000") ||
-    url.includes("192.168.68.183:8001")
+    url.includes("202.72.236.166:8001") ||
+    url.includes("202.72.236.166:8001")
   ) {
     // Extract path after the domain/port
     const urlParts = url.split("/");

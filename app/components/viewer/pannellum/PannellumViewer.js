@@ -22,8 +22,8 @@ const processImageUrl = (url) => {
 
   // For absolute URLs with the IP addresses, use the path-based proxy
   if (
-    url.includes("192.168.68.112:8000") ||
-    url.includes("192.168.68.183:8001")
+    url.includes("202.72.236.166:8001") ||
+    url.includes("202.72.236.166:8001")
   ) {
     // Extract path after the domain/port
     const urlParts = url.split("/");
