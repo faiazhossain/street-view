@@ -138,13 +138,12 @@ export function useImageData() {
 
           // Transform API data into GeoJSON format
           const features = sortedData.map((item) => {
-            // Handle different image URL formats
-            let imageUrl =
-              item.image_url_comp || item.imageUrl_High || item.image_url || "";
+            // Handle different image URL formats - for default display
+            let imageUrl = item.image_url || item.image_url_comp || "";
 
             // For the new format with image_url_high and image_url_comp fields
-            if (item.image_url_high) {
-              imageUrl = item.image_url_high;
+            if (item.image_url_comp) {
+              imageUrl = item.image_url_comp; // Use compressed by default for better performance
             }
 
             // Handle different server URLs - replace both old and new server IPs
@@ -157,12 +156,7 @@ export function useImageData() {
               properties: {
                 id: item.feature_id || item.id,
                 imageUrl: proxyImageUrl,
-                imageUrl_High: (
-                  item.image_url_high ||
-                  item.image_url_comp ||
-                  item.imageUrl_High ||
-                  ""
-                )
+                imageUrl_High: (item.image_url_high || item.imageUrl_High || "")
                   .replace("http://202.72.236.166:8001/", "/api/proxy/")
                   .replace("http://202.72.236.166:8001/", "/api/proxy/"),
                 imageUrl_Comp: (item.image_url_comp || item.imageUrl_Comp || "")

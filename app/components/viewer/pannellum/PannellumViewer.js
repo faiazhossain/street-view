@@ -21,7 +21,10 @@ const processImageUrl = (url) => {
   }
 
   // For absolute URLs with the IP addresses, use the path-based proxy
-  if (url.includes("192.168.68.112:8000") || url.includes("192.168.68.183:8001")) {
+  if (
+    url.includes("192.168.68.112:8000") ||
+    url.includes("192.168.68.183:8001")
+  ) {
     // Extract path after the domain/port
     const urlParts = url.split("/");
     const pathParts = urlParts.slice(3); // Skip http:, '', and domain:port
@@ -44,6 +47,7 @@ const PannellumViewer = ({
   const viewerRef = useRef(null);
   const [pannellumInstance, setPannellumInstance] = useState(null);
   const viewerId = useRef(`panorama-viewer-${Date.now()}`); // Generate unique ID for each instance
+  const [isHDMode, setIsHDMode] = useState(false); // Default to compressed mode for better initial performance
 
   // Redux
   const dispatch = useDispatch();
@@ -55,6 +59,20 @@ const PannellumViewer = ({
   const handleScriptLoad = () => {
     scriptLoadedGlobal = true;
     setScriptLoaded(true);
+  };
+
+  // Function to toggle HD mode
+  const toggleHDMode = () => {
+    if (pannellumInstance && selectedImage) {
+      // Save current view position before switching
+      saveCurrentViewPosition();
+
+      // Toggle HD mode
+      setIsHDMode((prev) => !prev);
+
+      // Need to reinitialize panorama with new image URL
+      cleanupPannellum();
+    }
   };
 
   // Function to save the current view position to Redux
@@ -241,8 +259,11 @@ const PannellumViewer = ({
           const viewer = window.pannellum.viewer(viewerRef.current.id, {
             type: "equirectangular",
             panorama: processImageUrl(
-              selectedImage.properties.imageUrl_High ||
-                selectedImage.properties.imageUrl
+              isHDMode
+                ? selectedImage.properties.imageUrl_High ||
+                    selectedImage.properties.imageUrl
+                : selectedImage.properties.imageUrl_Comp ||
+                    selectedImage.properties.imageUrl
             ),
             autoLoad: true,
             showControls: true,
@@ -289,6 +310,7 @@ const PannellumViewer = ({
     onPrevImage,
     savedViewPosition,
     dispatch,
+    isHDMode,
   ]);
 
   // Save the current view position periodically while user is interacting with the panorama
@@ -360,62 +382,75 @@ const PannellumViewer = ({
 
       {/* Fixed Navigation Controls */}
       {pannellumInstance && selectedImage && (
-        <div className='fixed-nav-controls'>
-          <div className='vertical-nav-buttons'>
-            {images.findIndex(
-              (img) => img.properties.id === selectedImage?.properties.id
-            ) <
-              images.length - 1 && (
-              <button
-                className='nav-btn next-btn'
-                onClick={() => {
-                  saveCurrentViewPosition();
-                  onNextImage();
-                }}
-                aria-label='Next image'
-              >
-                <div className='nav-content'>
-                  <svg
-                    className='nav-arrow'
-                    fill='#fff'
-                    height='24px'
-                    width='24px'
-                    viewBox='0 0 330 330'
-                  >
-                    <path d='M325.606,229.393l-150.004-150C172.79,76.58,168.974,75,164.996,75c-3.979,0-7.794,1.581-10.607,4.394 l-149.996,150c-5.858,5.858-5.858,15.355,0,21.213c5.857,5.857,15.355,5.858,21.213,0l139.39-139.393l139.397,139.393 C307.322,253.536,311.161,255,315,255c3.839,0,7.678-1.464,10.607-4.394C331.464,244.748,331.464,235.251,325.606,229.393z' />
-                  </svg>
-                  <span className='nav-text'>NEXT</span>
-                </div>
-              </button>
-            )}
+        <>
+          <div className='fixed-nav-controls'>
+            <div className='vertical-nav-buttons'>
+              {images.findIndex(
+                (img) => img.properties.id === selectedImage?.properties.id
+              ) <
+                images.length - 1 && (
+                <button
+                  className='nav-btn next-btn'
+                  onClick={() => {
+                    saveCurrentViewPosition();
+                    onNextImage();
+                  }}
+                  aria-label='Next image'
+                >
+                  <div className='nav-content'>
+                    <svg
+                      className='nav-arrow'
+                      fill='#fff'
+                      height='24px'
+                      width='24px'
+                      viewBox='0 0 330 330'
+                    >
+                      <path d='M325.606,229.393l-150.004-150C172.79,76.58,168.974,75,164.996,75c-3.979,0-7.794,1.581-10.607,4.394 l-149.996,150c-5.858,5.858-5.858,15.355,0,21.213c5.857,5.857,15.355,5.858,21.213,0l139.39-139.393l139.397,139.393 C307.322,253.536,311.161,255,315,255c3.839,0,7.678-1.464,10.607-4.394C331.464,244.748,331.464,235.251,325.606,229.393z' />
+                    </svg>
+                    <span className='nav-text'>NEXT</span>
+                  </div>
+                </button>
+              )}
 
-            {images.findIndex(
-              (img) => img.properties.id === selectedImage?.properties.id
-            ) > 0 && (
-              <button
-                className='nav-btn prev-btn'
-                onClick={() => {
-                  saveCurrentViewPosition();
-                  onPrevImage();
-                }}
-                aria-label='Previous image'
-              >
-                <div className='nav-content'>
-                  <svg
-                    className='nav-arrow down-arrow'
-                    fill='#fff'
-                    height='24px'
-                    width='24px'
-                    viewBox='0 0 330 330'
-                  >
-                    <path d='M325.606,229.393l-150.004-150C172.79,76.58,168.974,75,164.996,75c-3.979,0-7.794,1.581-10.607,4.394 l-149.996,150c-5.858,5.858-5.858,15.355,0,21.213c5.857,5.857,15.355,5.858,21.213,0l139.39-139.393l139.397,139.393 C307.322,253.536,311.161,255,315,255c3.839,0,7.678-1.464,10.607-4.394C331.464,244.748,331.464,235.251,325.606,229.393z' />
-                  </svg>
-                  <span className='nav-text'>PREV</span>
-                </div>
-              </button>
-            )}
+              {images.findIndex(
+                (img) => img.properties.id === selectedImage?.properties.id
+              ) > 0 && (
+                <button
+                  className='nav-btn prev-btn'
+                  onClick={() => {
+                    saveCurrentViewPosition();
+                    onPrevImage();
+                  }}
+                  aria-label='Previous image'
+                >
+                  <div className='nav-content'>
+                    <svg
+                      className='nav-arrow down-arrow'
+                      fill='#fff'
+                      height='24px'
+                      width='24px'
+                      viewBox='0 0 330 330'
+                    >
+                      <path d='M325.606,229.393l-150.004-150C172.79,76.58,168.974,75,164.996,75c-3.979,0-7.794,1.581-10.607,4.394 l-149.996,150c-5.858,5.858-5.858,15.355,0,21.213c5.857,5.857,15.355,5.858,21.213,0l139.39-139.393l139.397,139.393 C307.322,253.536,311.161,255,315,255c3.839,0,7.678-1.464,10.607-4.394C331.464,244.748,331.464,235.251,325.606,229.393z' />
+                    </svg>
+                    <span className='nav-text'>PREV</span>
+                  </div>
+                </button>
+              )}
+            </div>
           </div>
-        </div>
+
+          {/* HD Toggle Button - Separate from navigation controls */}
+          <div className='hd-toggle-container'>
+            <button
+              className={`hd-toggle-btn ${isHDMode ? "active" : ""}`}
+              onClick={toggleHDMode}
+              aria-label='Toggle HD mode'
+            >
+              {isHDMode ? "HD" : "HD"}
+            </button>
+          </div>
+        </>
       )}
     </>
   );
