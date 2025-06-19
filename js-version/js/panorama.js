@@ -88,7 +88,8 @@ function toggleAutoPlay() {
       panoramaViewer.setAutoRotate(2);
     }
 
-    // Setup timer to move to next image
+    // Setup timer to move to next image after the full delay
+    // This ensures we don't immediately jump to the next image on resume
     autoPlayTimer = setTimeout(() => {
       handleNextImage();
     }, 10000); // Move to next image after 10 seconds

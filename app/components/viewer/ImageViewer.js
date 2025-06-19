@@ -35,11 +35,18 @@ const ImageViewer = ({
   // Start or stop the auto-play timer based on isAutoPlaying state
   useEffect(() => {
     if (isAutoPlaying) {
-      timerRef.current = setInterval(() => {
+      // Set a timer with a longer delay (8 seconds) to allow users to view each panorama
+      timerRef.current = setTimeout(() => {
         onNextImage();
-      }, 1000);
+        // After the first image change, set up the interval for subsequent changes
+        timerRef.current = setInterval(() => {
+          onNextImage();
+        }, 4000); // 4 seconds between image changes
+      }, 4000); // Wait 4 seconds before changing the first image
     } else {
+      // Clear all timers when autoplay is stopped
       if (timerRef.current) {
+        clearTimeout(timerRef.current);
         clearInterval(timerRef.current);
         timerRef.current = null;
       }
@@ -48,6 +55,7 @@ const ImageViewer = ({
     // Clean up on unmount
     return () => {
       if (timerRef.current) {
+        clearTimeout(timerRef.current);
         clearInterval(timerRef.current);
       }
     };
