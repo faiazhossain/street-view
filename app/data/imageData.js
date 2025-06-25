@@ -148,8 +148,8 @@ export function useImageData() {
 
             // Handle different server URLs - replace both old and new server IPs
             const proxyImageUrl = imageUrl
-              .replace("http://202.72.236.166:8001/", "/api/proxy/")
-              .replace("http://202.72.236.166:8001/", "/api/proxy/");
+              .replace("http://202.40.182.162:8001/", "/api/proxy/")
+              .replace("http://202.40.182.162:8001/", "/api/proxy/");
 
             return {
               type: "Feature",
@@ -157,11 +157,11 @@ export function useImageData() {
                 id: item.feature_id || item.id,
                 imageUrl: proxyImageUrl,
                 imageUrl_High: (item.image_url_high || item.imageUrl_High || "")
-                  .replace("http://202.72.236.166:8001/", "/api/proxy/")
-                  .replace("http://202.72.236.166:8001/", "/api/proxy/"),
+                  .replace("http://202.40.182.162:8001/", "/api/proxy/")
+                  .replace("http://202.40.182.162:8001/", "/api/proxy/"),
                 imageUrl_Comp: (item.image_url_comp || item.imageUrl_Comp || "")
-                  .replace("http://202.72.236.166:8001/", "/api/proxy/")
-                  .replace("http://202.72.236.166:8001/", "/api/proxy/"),
+                  .replace("http://202.40.182.162:8001/", "/api/proxy/")
+                  .replace("http://202.40.182.162:8001/", "/api/proxy/"),
                 initialYaw: item.initial_yaw || item.initialYaw || 0,
                 initialPitch: item.initial_pitch || item.initialPitch || 0,
                 initialHfov: item.initial_hfov || item.initialHfov || 100,

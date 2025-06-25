@@ -5,10 +5,10 @@
 const formatImageUrl = (url) => {
   if (!url) return "";
 
-  // For absolute URLs with IP addresses like http://202.72.236.166:8001/track0/0_1.jpg
+  // For absolute URLs with IP addresses like http://202.40.182.162:8001/track0/0_1.jpg
   if (
-    url.includes("202.72.236.166:8001") ||
-    url.includes("202.72.236.166:8001")
+    url.includes("202.40.182.162:8001") ||
+    url.includes("202.40.182.162:8001")
   ) {
     // Extract path after the domain/port
     const urlParts = url.split("/");
@@ -26,7 +26,7 @@ const formatImageUrl = (url) => {
 export async function GET() {
   try {
     // Make the request to your local API server
-    const response = await fetch("http://202.72.236.166:8001/api/features", {
+    const response = await fetch("http://202.40.182.162:8001/api/features", {
       headers: {
         "Content-Type": "application/json",
       },
