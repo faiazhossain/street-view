@@ -5,10 +5,10 @@
 const formatImageUrl = (url) => {
   if (!url) return "";
 
-  // For absolute URLs with IP addresses like http://202.40.182.162:8001/track0/0_1.jpg
+  // For absolute URLs with IP addresses like http://202.72.236.166:8001/track0/0_1.jpg
   if (
-    url.includes("202.40.182.162:8001") ||
-    url.includes("202.40.182.162:8001")
+    url.includes("202.72.236.166:8001") ||
+    url.includes("202.72.236.166:8001")
   ) {
     // Extract path after the domain/port
     const urlParts = url.split("/");
@@ -26,7 +26,7 @@ const formatImageUrl = (url) => {
 export async function GET() {
   try {
     // Make the request to your local API server
-    const response = await fetch("http://202.40.182.162:8001/api/features", {
+    const response = await fetch("http://202.72.236.166:8001/api/features", {
       headers: {
         "Content-Type": "application/json",
       },
@@ -72,12 +72,22 @@ export async function GET() {
             imageUrl_Comp: formatImageUrl(
               item.image_url_comp || item.imageUrl_Comp || ""
             ),
+            initialYaw: item.initial_yaw || item.initialYaw || 0,
+            initialPitch: item.initial_pitch || item.initialPitch || 0,
+            initialHfov: item.initial_hfov || item.initialHfov || 100,
+            showCompass: item.show_compass || item.showCompass || true,
+            // Save both coordinate sets
+            longitude_original: parseFloat(item.longitude_original || 0),
+            latitude_original: parseFloat(item.latitude_original || 0),
+            longitude_snapped: parseFloat(item.longitude_snapped || 0),
+            latitude_snapped: parseFloat(item.latitude_snapped || 0),
           },
           geometry: {
             type: "Point",
+            // Default to snapped coordinates for the geometry
             coordinates: [
-              parseFloat(item.longitude || 0),
-              parseFloat(item.latitude || 0),
+              parseFloat(item.longitude_snapped || item.longitude || 0),
+              parseFloat(item.latitude_snapped || item.latitude || 0),
             ],
           },
         })),
@@ -110,12 +120,22 @@ export async function GET() {
           imageUrl_Comp: formatImageUrl(
             item.image_url_comp || item.imageUrl_Comp || ""
           ),
+          initialYaw: item.initial_yaw || item.initialYaw || 0,
+          initialPitch: item.initial_pitch || item.initialPitch || 0,
+          initialHfov: item.initial_hfov || item.initialHfov || 100,
+          showCompass: item.show_compass || item.showCompass || true,
+          // Save both coordinate sets
+          longitude_original: parseFloat(item.longitude_original || 0),
+          latitude_original: parseFloat(item.latitude_original || 0),
+          longitude_snapped: parseFloat(item.longitude_snapped || 0),
+          latitude_snapped: parseFloat(item.latitude_snapped || 0),
         },
         geometry: {
           type: "Point",
+          // Default to snapped coordinates for the geometry
           coordinates: [
-            parseFloat(item.longitude || 0),
-            parseFloat(item.latitude || 0),
+            parseFloat(item.longitude_snapped || item.longitude_original || 0),
+            parseFloat(item.latitude_snapped || item.latitude_original || 0),
           ],
         },
       })),

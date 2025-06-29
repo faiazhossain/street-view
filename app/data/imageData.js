@@ -148,8 +148,22 @@ export function useImageData() {
 
             // Handle different server URLs - replace both old and new server IPs
             const proxyImageUrl = imageUrl
-              .replace("http://202.40.182.162:8001/", "/api/proxy/")
-              .replace("http://202.40.182.162:8001/", "/api/proxy/");
+              .replace("http://202.72.236.166:8001/", "/api/proxy/")
+              .replace("http://202.72.236.166:8001/", "/api/proxy/");
+
+            // Handle both coordinate sets based on new API format
+            const longitude_snapped = parseFloat(
+              item.longitude_snapped || item.longitude || 0
+            );
+            const latitude_snapped = parseFloat(
+              item.latitude_snapped || item.latitude || 0
+            );
+            const longitude_original = parseFloat(
+              item.longitude_original || longitude_snapped
+            );
+            const latitude_original = parseFloat(
+              item.latitude_original || latitude_snapped
+            );
 
             return {
               type: "Feature",
@@ -157,22 +171,25 @@ export function useImageData() {
                 id: item.feature_id || item.id,
                 imageUrl: proxyImageUrl,
                 imageUrl_High: (item.image_url_high || item.imageUrl_High || "")
-                  .replace("http://202.40.182.162:8001/", "/api/proxy/")
-                  .replace("http://202.40.182.162:8001/", "/api/proxy/"),
+                  .replace("http://202.72.236.166:8001/", "/api/proxy/")
+                  .replace("http://202.72.236.166:8001/", "/api/proxy/"),
                 imageUrl_Comp: (item.image_url_comp || item.imageUrl_Comp || "")
-                  .replace("http://202.40.182.162:8001/", "/api/proxy/")
-                  .replace("http://202.40.182.162:8001/", "/api/proxy/"),
+                  .replace("http://202.72.236.166:8001/", "/api/proxy/")
+                  .replace("http://202.72.236.166:8001/", "/api/proxy/"),
                 initialYaw: item.initial_yaw || item.initialYaw || 0,
                 initialPitch: item.initial_pitch || item.initialPitch || 0,
                 initialHfov: item.initial_hfov || item.initialHfov || 100,
                 showCompass: item.show_compass || item.showCompass || true,
+                // Store both coordinate sets
+                longitude_original,
+                latitude_original,
+                longitude_snapped,
+                latitude_snapped,
               },
               geometry: {
                 type: "Point",
-                coordinates: [
-                  parseFloat(item.longitude || 0),
-                  parseFloat(item.latitude || 0),
-                ],
+                // Default to using snapped coordinates
+                coordinates: [longitude_snapped, latitude_snapped],
               },
             };
           });
