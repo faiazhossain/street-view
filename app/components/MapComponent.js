@@ -42,6 +42,26 @@ const MapComponent = ({
     return Math.max(2, Math.min(baseRadius * zoomFactor, 12));
   };
 
+  // Helper function to get coordinates based on toggle state
+  const getCoordinates = (feature) => {
+    if (useSnappedCoordinates) {
+      // Use snapped coordinates when the toggle is for snapped
+      const lon =
+        feature.properties.longitude_snapped || feature.geometry.coordinates[0];
+      const lat =
+        feature.properties.latitude_snapped || feature.geometry.coordinates[1];
+      return [lon, lat];
+    } else {
+      // Use original coordinates when toggle is for original
+      const lon =
+        feature.properties.longitude_original ||
+        feature.geometry.coordinates[0];
+      const lat =
+        feature.properties.latitude_original || feature.geometry.coordinates[1];
+      return [lon, lat];
+    }
+  };
+
   // Group images by their track ID
   useEffect(() => {
     if (!imageData.features || imageData.features.length === 0) return;
@@ -122,22 +142,7 @@ const MapComponent = ({
 
       // Create path coordinates from sorted features
       groups[trackName].path.geometry.coordinates = sortedFeatures.map(
-        (feature) => {
-          // Choose coordinate type based on toggle state
-          if (useSnappedCoordinates) {
-            // Use snapped coordinates (default)
-            return feature.geometry.coordinates;
-          } else {
-            // Use original coordinates
-            const lon =
-              feature.properties.longitude_original ||
-              feature.geometry.coordinates[0];
-            const lat =
-              feature.properties.latitude_original ||
-              feature.geometry.coordinates[1];
-            return [lon, lat];
-          }
-        }
+        (feature) => getCoordinates(feature)
       );
     });
 
@@ -159,16 +164,7 @@ const MapComponent = ({
         const newFeature = JSON.parse(JSON.stringify(feature));
 
         // Update coordinates based on toggle selection
-        if (!useSnappedCoordinates) {
-          // Use original coordinates
-          const lon =
-            feature.properties.longitude_original ||
-            feature.geometry.coordinates[0];
-          const lat =
-            feature.properties.latitude_original ||
-            feature.geometry.coordinates[1];
-          newFeature.geometry.coordinates = [lon, lat];
-        }
+        newFeature.geometry.coordinates = getCoordinates(feature);
 
         return newFeature;
       }),
@@ -253,20 +249,12 @@ const MapComponent = ({
             .map((feature) => {
               // For selected marker, adjust coordinates based on toggle
               const markerFeature = { ...feature };
+              const [lon, lat] = getCoordinates(feature);
 
-              if (!useSnappedCoordinates) {
-                // Need to update the marker's position for the correct display
-                const lon =
-                  feature.properties.longitude_original ||
-                  feature.geometry.coordinates[0];
-                const lat =
-                  feature.properties.latitude_original ||
-                  feature.geometry.coordinates[1];
-                markerFeature.geometry = {
-                  ...markerFeature.geometry,
-                  coordinates: [lon, lat],
-                };
-              }
+              markerFeature.geometry = {
+                ...markerFeature.geometry,
+                coordinates: [lon, lat],
+              };
 
               return (
                 <SelectedMarker

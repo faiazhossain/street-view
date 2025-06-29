@@ -40,16 +40,48 @@ export function useImageData() {
           result.type === "FeatureCollection" &&
           Array.isArray(result.features)
         ) {
-          // The API route is already returning properly formatted GeoJSON
-          setImageData(result);
+          // Ensure each feature has both original and snapped coordinates
+          const processedFeatures = result.features.map((feature) => {
+            const props = feature.properties;
+
+            // Make sure both coordinate pairs exist
+            const longitude_snapped = parseFloat(
+              props.longitude_snapped || feature.geometry.coordinates[0]
+            );
+            const latitude_snapped = parseFloat(
+              props.latitude_snapped || feature.geometry.coordinates[1]
+            );
+            const longitude_original = parseFloat(
+              props.longitude_original || longitude_snapped
+            );
+            const latitude_original = parseFloat(
+              props.latitude_original || latitude_snapped
+            );
+
+            return {
+              ...feature,
+              properties: {
+                ...props,
+                longitude_original,
+                latitude_original,
+                longitude_snapped,
+                latitude_snapped,
+              },
+            };
+          });
+
+          setImageData({
+            type: "FeatureCollection",
+            features: processedFeatures,
+          });
 
           // Generate path from the points
-          if (result.features.length > 0) {
+          if (processedFeatures.length > 0) {
             // Check if we need to group by track
             const trackGroups = {};
 
             // Group features by track ID
-            result.features.forEach((feature) => {
+            processedFeatures.forEach((feature) => {
               const id = feature.properties.id;
               // Extract track name using regex (e.g., "track0" from "img_track0_265")
               const trackMatch = id?.match(/img_([^_]+)/);
@@ -149,9 +181,11 @@ export function useImageData() {
             // Handle different server URLs - replace both old and new server IPs
             const proxyImageUrl = imageUrl
               .replace("http://202.72.236.166:8001/", "/api/proxy/")
-              .replace("http://202.72.236.166:8001/", "/api/proxy/");
+              .replace("http://202.72.236.166:8001/", "/api/proxy/")
+              .replace("http://202.40.182.162:8001/", "/api/proxy/");
 
             // Handle both coordinate sets based on new API format
+            // Ensure we always have valid numbers for both coordinate pairs
             const longitude_snapped = parseFloat(
               item.longitude_snapped || item.longitude || 0
             );
@@ -172,15 +206,17 @@ export function useImageData() {
                 imageUrl: proxyImageUrl,
                 imageUrl_High: (item.image_url_high || item.imageUrl_High || "")
                   .replace("http://202.72.236.166:8001/", "/api/proxy/")
-                  .replace("http://202.72.236.166:8001/", "/api/proxy/"),
+                  .replace("http://202.72.236.166:8001/", "/api/proxy/")
+                  .replace("http://202.40.182.162:8001/", "/api/proxy/"),
                 imageUrl_Comp: (item.image_url_comp || item.imageUrl_Comp || "")
                   .replace("http://202.72.236.166:8001/", "/api/proxy/")
-                  .replace("http://202.72.236.166:8001/", "/api/proxy/"),
+                  .replace("http://202.72.236.166:8001/", "/api/proxy/")
+                  .replace("http://202.40.182.162:8001/", "/api/proxy/"),
                 initialYaw: item.initial_yaw || item.initialYaw || 0,
                 initialPitch: item.initial_pitch || item.initialPitch || 0,
                 initialHfov: item.initial_hfov || item.initialHfov || 100,
                 showCompass: item.show_compass || item.showCompass || true,
-                // Store both coordinate sets
+                // Store both coordinate sets with proper fallbacks
                 longitude_original,
                 latitude_original,
                 longitude_snapped,
@@ -188,7 +224,7 @@ export function useImageData() {
               },
               geometry: {
                 type: "Point",
-                // Default to using snapped coordinates
+                // Default to using snapped coordinates in the geometry
                 coordinates: [longitude_snapped, latitude_snapped],
               },
             };
