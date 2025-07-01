@@ -1,11 +1,11 @@
-// This file fetches data from the API instead of using local JSON
-"use client";
+// Simplified data fetching hook
+'use client';
 
-import { useState, useEffect } from "react";
+import { useState, useEffect } from 'react';
 
-// Default empty data structure to use while loading
+// Default empty data structure
 const emptyGeoJSON = {
-  type: "FeatureCollection",
+  type: 'FeatureCollection',
   features: [],
 };
 
@@ -20,9 +20,10 @@ export function useImageData() {
     async function fetchData() {
       try {
         setIsLoading(true);
-        // Use the Next.js API route instead of direct API calls
-        // This solves CORS issues by proxying the request through our own domain
-        const response = await fetch("/api/features");
+        setError(null);
+
+        // Fetch data from our simplified API route
+        const response = await fetch('/api/features');
 
         if (!response.ok) {
           throw new Error(`API responded with status: ${response.status}`);
@@ -31,295 +32,38 @@ export function useImageData() {
         const result = await response.json();
 
         // Handle error response
-        if (result.status === "error") {
-          throw new Error(result.message || "Unknown API error");
+        if (result.status === 'error') {
+          throw new Error(result.message || 'Unknown API error');
         }
 
-        // Check if the response is already a properly formatted GeoJSON FeatureCollection
-        if (
-          result.type === "FeatureCollection" &&
-          Array.isArray(result.features)
-        ) {
-          // Ensure each feature has both original and snapped coordinates
-          const processedFeatures = result.features.map((feature) => {
-            const props = feature.properties;
+        // Set the image data
+        setImageData(result);
 
-            // Make sure both coordinate pairs exist
-            const longitude_snapped = parseFloat(
-              props.longitude_snapped || feature.geometry.coordinates[0]
-            );
-            const latitude_snapped = parseFloat(
-              props.latitude_snapped || feature.geometry.coordinates[1]
-            );
-            const longitude_original = parseFloat(
-              props.longitude_original || longitude_snapped
-            );
-            const latitude_original = parseFloat(
-              props.latitude_original || latitude_snapped
-            );
+        // Generate path data from the features for map display
+        if (result.features && result.features.length > 0) {
+          const pathCoordinates = result.features.map(
+            (feature) => feature.geometry.coordinates
+          );
 
-            return {
-              ...feature,
-              properties: {
-                ...props,
-                longitude_original,
-                latitude_original,
-                longitude_snapped,
-                latitude_snapped,
-              },
-            };
-          });
-
-          setImageData({
-            type: "FeatureCollection",
-            features: processedFeatures,
-          });
-
-          // Generate path from the points
-          if (processedFeatures.length > 0) {
-            // Check if we need to group by track
-            const trackGroups = {};
-
-            // Group features by track ID
-            processedFeatures.forEach((feature) => {
-              const id = feature.properties.id;
-              // Extract track name using regex (e.g., "track0" from "img_track0_265")
-              const trackMatch = id?.match(/img_([^_]+)/);
-
-              // New format handling for IDs like "0_1" - extract the first part as track
-              const newFormatMatch = id?.match(/^(\d+)_\d+$/);
-
-              let trackName;
-              if (trackMatch) {
-                trackName = trackMatch[1]; // Old format: "track0", "track1", etc.
-              } else if (newFormatMatch) {
-                trackName = "track" + newFormatMatch[1]; // New format: convert "0_1" to "track0"
-              } else {
-                trackName = "default"; // Fallback
-              }
-
-              if (!trackGroups[trackName]) {
-                trackGroups[trackName] = [];
-              }
-              trackGroups[trackName].push(feature);
-            });
-
-            // Create path GeoJSON with multiple LineStrings (one per track)
-            const paths = {
-              type: "FeatureCollection",
-              features: Object.keys(trackGroups).map((trackName) => {
-                // Sort features by ID before creating the path
-                const sortedFeatures = [...trackGroups[trackName]].sort(
-                  (a, b) => {
-                    let numA, numB;
-
-                    if (a.properties.id?.includes("_")) {
-                      // Handle both formats: img_track0_265 or 0_1
-                      numA = parseInt(
-                        a.properties.id.match(/_(\d+)$/)?.[1] ||
-                          a.properties.id.split("_")[1] ||
-                          0
-                      );
-                    } else {
-                      numA = parseInt(a.properties.id?.replace(/\D/g, "") || 0);
-                    }
-
-                    if (b.properties.id?.includes("_")) {
-                      numB = parseInt(
-                        b.properties.id.match(/_(\d+)$/)?.[1] ||
-                          b.properties.id.split("_")[1] ||
-                          0
-                      );
-                    } else {
-                      numB = parseInt(b.properties.id?.replace(/\D/g, "") || 0);
-                    }
-
-                    return numA - numB;
-                  }
-                );
-
-                return {
-                  type: "Feature",
-                  properties: { trackName },
-                  geometry: {
-                    type: "LineString",
-                    coordinates: sortedFeatures.map(
-                      (feature) => feature.geometry.coordinates
-                    ),
-                  },
-                };
-              }),
-            };
-
-            setImagePath(paths);
-          }
-
-          setIsLoading(false);
-          return;
-        }
-
-        // Handle old API format
-        if (result.status === "success" && Array.isArray(result.data)) {
-          // Sort the data by numerical ID first
-          const sortedData = [...result.data].sort((a, b) => {
-            // Extract the numeric part from feature_id (img1, img2, etc.)
-            const numA = parseInt(a.feature_id?.replace(/\D/g, "") || 0);
-            const numB = parseInt(b.feature_id?.replace(/\D/g, "") || 0);
-            return numA - numB;
-          });
-
-          // Transform API data into GeoJSON format
-          const features = sortedData.map((item) => {
-            // Handle different image URL formats - for default display
-            let imageUrl = item.image_url || item.image_url_comp || "";
-
-            // For the new format with image_url_high and image_url_comp fields
-            if (item.image_url_comp) {
-              imageUrl = item.image_url_comp; // Use compressed by default for better performance
-            }
-
-            // Handle different server URLs - replace both old and new server IPs
-            const proxyImageUrl = imageUrl
-              .replace("http://202.72.236.166:8001/", "/api/proxy/")
-              .replace("http://202.72.236.166:8001/", "/api/proxy/")
-              .replace("http://202.40.182.162:8001/", "/api/proxy/");
-
-            // Handle both coordinate sets based on new API format
-            // Ensure we always have valid numbers for both coordinate pairs
-            const longitude_snapped = parseFloat(
-              item.longitude_snapped || item.longitude || 0
-            );
-            const latitude_snapped = parseFloat(
-              item.latitude_snapped || item.latitude || 0
-            );
-            const longitude_original = parseFloat(
-              item.longitude_original || longitude_snapped
-            );
-            const latitude_original = parseFloat(
-              item.latitude_original || latitude_snapped
-            );
-
-            return {
-              type: "Feature",
-              properties: {
-                id: item.feature_id || item.id,
-                imageUrl: proxyImageUrl,
-                imageUrl_High: (item.image_url_high || item.imageUrl_High || "")
-                  .replace("http://202.72.236.166:8001/", "/api/proxy/")
-                  .replace("http://202.72.236.166:8001/", "/api/proxy/")
-                  .replace("http://202.40.182.162:8001/", "/api/proxy/"),
-                imageUrl_Comp: (item.image_url_comp || item.imageUrl_Comp || "")
-                  .replace("http://202.72.236.166:8001/", "/api/proxy/")
-                  .replace("http://202.72.236.166:8001/", "/api/proxy/")
-                  .replace("http://202.40.182.162:8001/", "/api/proxy/"),
-                initialYaw: item.initial_yaw || item.initialYaw || 0,
-                initialPitch: item.initial_pitch || item.initialPitch || 0,
-                initialHfov: item.initial_hfov || item.initialHfov || 100,
-                showCompass: item.show_compass || item.showCompass || true,
-                // Store both coordinate sets with proper fallbacks
-                longitude_original,
-                latitude_original,
-                longitude_snapped,
-                latitude_snapped,
-              },
-              geometry: {
-                type: "Point",
-                // Default to using snapped coordinates in the geometry
-                coordinates: [longitude_snapped, latitude_snapped],
-              },
-            };
-          });
-
-          const geoJSON = {
-            type: "FeatureCollection",
-            features,
+          const pathData = {
+            type: 'Feature',
+            geometry: {
+              type: 'LineString',
+              coordinates: pathCoordinates,
+            },
+            properties: {
+              name: 'Street View Path',
+            },
           };
 
-          setImageData(geoJSON);
-
-          // Group by tracks (for line segments)
-          const trackGroups = {};
-
-          // Group features by track ID
-          features.forEach((feature) => {
-            const id = feature.properties.id;
-            // Extract track name using regex (e.g., "track0" from "img_track0_265")
-            const trackMatch = id?.match(/img_([^_]+)/);
-
-            // New format handling for IDs like "0_1" - extract the first part as track
-            const newFormatMatch = id?.match(/^(\d+)_\d+$/);
-
-            let trackName;
-            if (trackMatch) {
-              trackName = trackMatch[1]; // Old format: "track0", "track1", etc.
-            } else if (newFormatMatch) {
-              trackName = "track" + newFormatMatch[1]; // New format: convert "0_1" to "track0"
-            } else {
-              trackName = "default"; // Fallback
-            }
-
-            if (!trackGroups[trackName]) {
-              trackGroups[trackName] = [];
-            }
-            trackGroups[trackName].push(feature);
-          });
-
-          // Create path GeoJSON with multiple LineStrings (one per track)
-          const paths = {
-            type: "FeatureCollection",
-            features: Object.keys(trackGroups).map((trackName) => {
-              // Sort features by ID before creating the path
-              const sortedFeatures = [...trackGroups[trackName]].sort(
-                (a, b) => {
-                  let numA, numB;
-
-                  if (a.properties.id?.includes("_")) {
-                    // Handle both formats: img_track0_265 or 0_1
-                    numA = parseInt(
-                      a.properties.id.match(/_(\d+)$/)?.[1] ||
-                        a.properties.id.split("_")[1] ||
-                        0
-                    );
-                  } else {
-                    numA = parseInt(a.properties.id?.replace(/\D/g, "") || 0);
-                  }
-
-                  if (b.properties.id?.includes("_")) {
-                    numB = parseInt(
-                      b.properties.id.match(/_(\d+)$/)?.[1] ||
-                        b.properties.id.split("_")[1] ||
-                        0
-                    );
-                  } else {
-                    numB = parseInt(b.properties.id?.replace(/\D/g, "") || 0);
-                  }
-
-                  return numA - numB;
-                }
-              );
-
-              return {
-                type: "Feature",
-                properties: { trackName },
-                geometry: {
-                  type: "LineString",
-                  coordinates: sortedFeatures.map(
-                    (feature) => feature.geometry.coordinates
-                  ),
-                },
-              };
-            }),
-          };
-
-          setImagePath(paths);
-        } else {
-          throw new Error("Invalid data format received from API");
+          setImagePath(pathData);
         }
-
-        setIsLoading(false);
       } catch (err) {
-        console.error("Error fetching image data:", err);
+        console.error('Error fetching data:', err);
         setError(err.message);
+        setImageData(emptyGeoJSON);
+        setImagePath(null);
+      } finally {
         setIsLoading(false);
       }
     }
@@ -327,19 +71,10 @@ export function useImageData() {
     fetchData();
   }, []);
 
-  return { imageData, imagePath, isLoading, error };
+  return {
+    imageData,
+    imagePath,
+    isLoading,
+    error,
+  };
 }
-
-// For backward compatibility with existing code that imports directly
-// We provide these default exports, but they will be empty initially
-export const imageData = emptyGeoJSON;
-
-// Generated path from the points
-export const imagePath = {
-  type: "Feature",
-  properties: {},
-  geometry: {
-    type: "LineString",
-    coordinates: [],
-  },
-};

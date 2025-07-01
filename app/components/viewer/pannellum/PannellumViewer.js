@@ -1,39 +1,21 @@
-"use client";
+'use client';
 
-import { useState, useEffect, useRef } from "react";
-import Script from "next/script";
-import { useDispatch, useSelector } from "react-redux";
+import { useState, useEffect, useRef } from 'react';
+import Script from 'next/script';
+import { useDispatch, useSelector } from 'react-redux';
 import {
   saveViewPosition,
   selectViewPosition,
-} from "@/app/redux/slices/panoramaSlice";
+} from '@/app/redux/slices/panoramaSlice';
 
 // Create a ref that persists across component mounts to track script loading
 let scriptLoadedGlobal = false;
 
-// Helper function to properly process image URLs
+// Helper function to use direct image URLs (no proxy needed)
 const processImageUrl = (url) => {
-  if (!url) return "";
+  if (!url) return '';
 
-  // If the URL already starts with /api/proxy/, don't modify it
-  if (url.startsWith("/api/proxy/")) {
-    return url;
-  }
-
-  // For absolute URLs with the IP addresses, use the path-based proxy
-  if (
-    url.includes("202.72.236.166:8001") ||
-    url.includes("202.72.236.166:8001")
-  ) {
-    // Extract path after the domain/port
-    const urlParts = url.split("/");
-    const pathParts = urlParts.slice(3); // Skip http:, '', and domain:port
-    const path = pathParts.join("/");
-
-    return `/api/proxy/${path}`;
-  }
-
-  // For other URLs, use as is
+  // Return the URL as-is since we're using direct URLs from the server
   return url;
 };
 
@@ -103,7 +85,7 @@ const PannellumViewer = ({
           // console.log(`Saved position for ${selectedImage.properties.id}:`, position);
         }
       } catch (error) {
-        console.error("Error saving view position:", error);
+        console.error('Error saving view position:', error);
       }
     }
   };
@@ -116,16 +98,16 @@ const PannellumViewer = ({
     if (pannellumInstance) {
       try {
         // Try to call the proper destroy method if available
-        if (typeof pannellumInstance.destroy === "function") {
+        if (typeof pannellumInstance.destroy === 'function') {
           pannellumInstance.destroy();
         }
       } catch (error) {
-        console.error("Error destroying pannellum instance:", error);
+        console.error('Error destroying pannellum instance:', error);
       }
 
       // Fallback cleanup - clear the HTML
       if (viewerRef.current) {
-        viewerRef.current.innerHTML = "";
+        viewerRef.current.innerHTML = '';
       }
 
       setPannellumInstance(null);
@@ -154,7 +136,7 @@ const PannellumViewer = ({
         try {
           // Make sure the element is empty
           if (viewerRef.current) {
-            viewerRef.current.innerHTML = "";
+            viewerRef.current.innerHTML = '';
             // Store the current image ID on the DOM element for reference
             viewerRef.current._currentImageId = currentImageId;
           }
@@ -189,24 +171,24 @@ const PannellumViewer = ({
             hotSpots.push({
               pitch: 0,
               yaw: nextYaw,
-              type: "custom",
-              cssClass: "custom-hotspot next-hotspot",
+              type: 'custom',
+              cssClass: 'custom-hotspot next-hotspot',
               createTooltipFunc: (hotSpotDiv) => {
-                hotSpotDiv.classList.add("custom-tooltip");
+                hotSpotDiv.classList.add('custom-tooltip');
 
                 // Create SVG element for the icon (pointing up)
-                const nextIcon = document.createElement("div");
+                const nextIcon = document.createElement('div');
                 nextIcon.innerHTML = `<svg fill="#fff" height="200px" width="200px" version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 330 330" xml:space="preserve"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path id="XMLID_224_" d="M325.606,229.393l-150.004-150C172.79,76.58,168.974,75,164.996,75c-3.979,0-7.794,1.581-10.607,4.394 l-149.996,150c-5.858,5.858-5.858,15.355,0,21.213c5.857,5.857,15.355,5.858,21.213,0l139.39-139.393l139.397,139.393 C307.322,253.536,311.161,255,315,255c3.839,0,7.678-1.464,10.607-4.394C331.464,244.748,331.464,235.251,325.606,229.393z"></path> </g></svg>`;
-                nextIcon.classList.add("hotspot-icon", "fixed-icon");
+                nextIcon.classList.add('hotspot-icon', 'fixed-icon');
                 hotSpotDiv.appendChild(nextIcon);
 
-                const nextText = document.createElement("span");
-                nextText.textContent = "NEXT";
-                nextText.classList.add("hotspot-text");
+                const nextText = document.createElement('span');
+                nextText.textContent = 'NEXT';
+                nextText.classList.add('hotspot-text');
                 hotSpotDiv.appendChild(nextText);
 
                 // Save current view position before navigating
-                hotSpotDiv.addEventListener("click", () => {
+                hotSpotDiv.addEventListener('click', () => {
                   saveCurrentViewPosition();
                   onNextImage();
                 });
@@ -219,28 +201,28 @@ const PannellumViewer = ({
             hotSpots.push({
               pitch: 0,
               yaw: prevYaw,
-              type: "custom",
-              cssClass: "custom-hotspot prev-hotspot",
+              type: 'custom',
+              cssClass: 'custom-hotspot prev-hotspot',
               createTooltipFunc: (hotSpotDiv) => {
-                hotSpotDiv.classList.add("custom-tooltip");
+                hotSpotDiv.classList.add('custom-tooltip');
 
                 // Create SVG element for the icon (pointing down)
-                const prevIcon = document.createElement("div");
+                const prevIcon = document.createElement('div');
                 prevIcon.innerHTML = `<svg fill="#fff" width="800px" height="800px" viewBox="0 -6 524 524" xmlns="http://www.w3.org/2000/svg" ><title>down</title><path d="M64 191L98 157 262 320 426 157 460 191 262 387 64 191Z" /></svg>`;
                 prevIcon.classList.add(
-                  "hotspot-icon",
-                  "fixed-icon",
-                  "down-icon"
+                  'hotspot-icon',
+                  'fixed-icon',
+                  'down-icon'
                 );
                 hotSpotDiv.appendChild(prevIcon);
 
-                const prevText = document.createElement("span");
-                prevText.textContent = "PREV";
-                prevText.classList.add("hotspot-text");
+                const prevText = document.createElement('span');
+                prevText.textContent = 'PREV';
+                prevText.classList.add('hotspot-text');
                 hotSpotDiv.appendChild(prevText);
 
                 // Save current view position before navigating
-                hotSpotDiv.addEventListener("click", () => {
+                hotSpotDiv.addEventListener('click', () => {
                   saveCurrentViewPosition();
                   onPrevImage();
                 });
@@ -249,7 +231,7 @@ const PannellumViewer = ({
           }
 
           // Log the view values for debugging only when needed
-          if (process.env.NODE_ENV === "development" && false) {
+          if (process.env.NODE_ENV === 'development' && false) {
             // Set to true when debugging is needed
             console.log(
               `Initial values - Yaw: ${initialYaw}, Pitch: ${initialPitch}, HFOV: ${initialHfov}, Next Yaw: ${nextYaw}, Prev Yaw: ${prevYaw}`
@@ -257,7 +239,7 @@ const PannellumViewer = ({
           }
 
           const viewer = window.pannellum.viewer(viewerRef.current.id, {
-            type: "equirectangular",
+            type: 'equirectangular',
             panorama: processImageUrl(
               isHDMode
                 ? selectedImage.properties.imageUrl_High ||
@@ -281,19 +263,19 @@ const PannellumViewer = ({
             keyboardZoom: true,
             hotSpots: hotSpots,
             onLoad: () => {
-              console.log("Pannellum onLoad callback fired");
+              console.log('Pannellum onLoad callback fired');
             },
             onError: (err) => {
-              console.error("Pannellum Error:", err);
+              console.error('Pannellum Error:', err);
             },
           });
 
           setPannellumInstance(viewer);
         } catch (err) {
-          console.error("Error initializing Pannellum:", err);
+          console.error('Error initializing Pannellum:', err);
         }
       } else {
-        console.error("Pannellum not available on window object");
+        console.error('Pannellum not available on window object');
       }
     }, 50); // Small delay to ensure DOM is ready
 
@@ -329,17 +311,17 @@ const PannellumViewer = ({
     };
 
     if (viewerRef.current) {
-      viewerRef.current.addEventListener("mousedown", handleInteraction);
-      viewerRef.current.addEventListener("wheel", handleInteraction);
-      viewerRef.current.addEventListener("touchstart", handleInteraction);
+      viewerRef.current.addEventListener('mousedown', handleInteraction);
+      viewerRef.current.addEventListener('wheel', handleInteraction);
+      viewerRef.current.addEventListener('touchstart', handleInteraction);
     }
 
     return () => {
       clearInterval(saveInterval);
       if (viewerRef.current) {
-        viewerRef.current.removeEventListener("mousedown", handleInteraction);
-        viewerRef.current.removeEventListener("wheel", handleInteraction);
-        viewerRef.current.removeEventListener("touchstart", handleInteraction);
+        viewerRef.current.removeEventListener('mousedown', handleInteraction);
+        viewerRef.current.removeEventListener('wheel', handleInteraction);
+        viewerRef.current.removeEventListener('touchstart', handleInteraction);
         clearTimeout(viewerRef.current.saveTimeout);
       }
     };
@@ -443,11 +425,11 @@ const PannellumViewer = ({
           {/* HD Toggle Button - Separate from navigation controls */}
           <div className='hd-toggle-container'>
             <button
-              className={`hd-toggle-btn ${isHDMode ? "active" : ""}`}
+              className={`hd-toggle-btn ${isHDMode ? 'active' : ''}`}
               onClick={toggleHDMode}
               aria-label='Toggle HD mode'
             >
-              {isHDMode ? "HD" : "HD"}
+              {isHDMode ? 'HD' : 'HD'}
             </button>
           </div>
         </>
