@@ -5,13 +5,21 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --primary: #0080ff;
+  --primary-light: #3399ff;
+  --primary-dark: #0066cc;
+  --map-point: #ff0000;
+  --map-path: #0080ff;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+.dark {
+  --background: #0a0a0a;
+  --foreground: #ededed;
+  --primary: #3399ff;
+  --primary-light: #66b3ff;
+  --primary-dark: #0066cc;
+  --map-point: #ff3333;
+  --map-path: #3399ff;
 }
 
 body {
@@ -44,10 +52,19 @@ body {
   transition: transform 0.2s ease-in-out;
 }
 
+.dark .marker-pin {
+  border-color: #333;
+  box-shadow: 0 0 5px rgba(255, 255, 255, 0.2);
+}
+
 .selected-marker .marker-pin {
   background-color: #4e89ff;
   transform: scale(1.2);
   box-shadow: 0 0 8px rgba(0, 0, 0, 0.5);
+}
+
+.dark .selected-marker .marker-pin {
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.3);
 }
 
 /* Image Viewer Styles */

@@ -4,6 +4,7 @@ import React, { useState, useCallback, useEffect } from "react";
 import Map, { Source, Layer } from "react-map-gl/maplibre";
 import SelectedMarker from "./map/SelectedMarker";
 import "maplibre-gl/dist/maplibre-gl.css";
+import { useTheme } from "../context/ThemeContext";
 
 const MapComponent = ({
   imageData,
@@ -11,8 +12,17 @@ const MapComponent = ({
   selectedImageId,
   onImageSelect,
   isCompact = false,
-  mapStyle = "https://map.barikoi.com/styles/barikoi-light/style.json?key=NDE2NzpVNzkyTE5UMUoy",
+  customMapStyle = null,
 }) => {
+  const { darkMode } = useTheme();
+
+  // Dynamically set map style based on theme
+  const mapStyle =
+    customMapStyle ||
+    (darkMode
+      ? "https://map.barikoi.com/styles/barikoi-dark-mode/style.json?key=NDE2NzpVNzkyTE5UMUoy"
+      : "https://map.barikoi.com/styles/barikoi-light/style.json?key=NDE2NzpVNzkyTE5UMUoy");
+
   const [viewState, setViewState] = useState({
     longitude: imageData.features[0]?.geometry.coordinates[0] || 0,
     latitude: imageData.features[0]?.geometry.coordinates[1] || 0,
