@@ -1,7 +1,13 @@
 "use client";
 
 import React, { useState, useCallback, useEffect } from "react";
-import Map, { Source, Layer } from "react-map-gl/maplibre";
+import Map, {
+  Source,
+  Layer,
+  NavigationControl,
+  ScaleControl,
+  AttributionControl,
+} from "react-map-gl/maplibre";
 import SelectedMarker from "./map/SelectedMarker";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useTheme } from "../context/ThemeContext";
@@ -27,6 +33,8 @@ const MapComponent = ({
     longitude: imageData.features[0]?.geometry.coordinates[0] || 0,
     latitude: imageData.features[0]?.geometry.coordinates[1] || 0,
     zoom: 14,
+    pitch: 0,
+    bearing: 0,
   });
 
   // State to store track groups
@@ -43,14 +51,13 @@ const MapComponent = ({
   // Calculate circle radius based on zoom level
   const getCircleRadius = () => {
     // Base radius at zoom level 14
-    const baseRadius = 1.5;
+    const baseRadius = 2.5;
 
     // More pronounced zoom scaling
-    const zoomFactor = Math.pow(1.75, viewState.zoom - 14);
+    const zoomFactor = Math.pow(1.8, viewState.zoom - 14);
 
     // Limit the minimum and maximum size
-    // Smaller minimum size (1.5) for low zoom levels
-    return Math.max(2, Math.min(baseRadius * zoomFactor, 12));
+    return Math.max(2, Math.min(baseRadius * zoomFactor, 14));
   };
 
   // Helper function to get coordinates based on toggle state
@@ -162,8 +169,8 @@ const MapComponent = ({
 
   // Generate different colors for different tracks
   const getTrackColor = () => {
-    // Return static blue color for all tracks
-    return "#0080ff";
+    // Return a beautiful blue gradient color
+    return "rgba(0, 128, 255, 0.8)";
   };
 
   // Create feature collection with appropriate coordinates based on toggle
@@ -203,19 +210,54 @@ const MapComponent = ({
   );
 
   return (
-    <div className='relative'>
+    <div className='relative rounded-xl overflow-hidden shadow-lg'>
       <Map
         {...viewState}
-        style={{ width: "100%", height: "500px" }}
+        style={{ width: "100%", height: isCompact ? "300px" : "75vh" }}
         mapStyle={mapStyle}
         onMove={(evt) => setViewState(evt.viewState)}
         interactiveLayerIds={interactiveLayerIds}
         onClick={onMapClick}
+        dragRotate={!isCompact}
+        pitchWithRotate={!isCompact}
+        attributionControl={false}
       >
+        {/* Map Controls - Don't show in compact mode */}
+        {!isCompact && (
+          <>
+            <NavigationControl position='top-right' visualizePitch={true} />
+            <ScaleControl position='bottom-right' />
+            <AttributionControl
+              position='bottom-left'
+              customAttribution='ThirdEye360'
+            />
+          </>
+        )}
+
         {/* Track-specific Layers */}
         {Object.keys(trackGroups).map((trackName) => (
           <React.Fragment key={trackName}>
-            {/* First render the track path layer (lines below) */}
+            {/* Path outline/glow effect - render this first for proper layering */}
+            <Source
+              id={`${trackName}-path-outline-source`}
+              type='geojson'
+              data={trackGroups[trackName].path}
+            >
+              <Layer
+                id={`${trackName}-path-outline`}
+                type='line'
+                paint={{
+                  "line-color": darkMode
+                    ? "rgba(0, 128, 255, 0.4)"
+                    : "rgba(0, 92, 230, 0.5)",
+                  "line-width": 9,
+                  "line-blur": 8,
+                  "line-opacity": 0.6,
+                }}
+              />
+            </Source>
+
+            {/* Main path line */}
             <Source
               id={`${trackName}-path-source`}
               type='geojson'
@@ -225,9 +267,49 @@ const MapComponent = ({
                 id={`${trackName}-path-line`}
                 type='line'
                 paint={{
-                  "line-color": trackGroups[trackName].color,
-                  "line-width": 4,
-                  "line-opacity": 0.8,
+                  "line-color": [
+                    "interpolate",
+                    ["linear"],
+                    ["zoom"],
+                    10,
+                    "#0080ff",
+                    16,
+                    "#0099ff",
+                    20,
+                    "#00bbff",
+                  ],
+                  "line-width": [
+                    "interpolate",
+                    ["linear"],
+                    ["zoom"],
+                    10,
+                    2,
+                    14,
+                    4,
+                    18,
+                    6,
+                  ],
+                  "line-opacity": 0.85,
+                }}
+              />
+            </Source>
+
+            {/* Add directional arrows to show path direction */}
+            <Source
+              id={`${trackName}-arrows-source`}
+              type='geojson'
+              data={trackGroups[trackName].path}
+            >
+              <Layer
+                id={`${trackName}-arrows`}
+                type='symbol'
+                paint={{}}
+                layout={{
+                  "symbol-placement": "line",
+                  "symbol-spacing": 100,
+                  "icon-image": "arrow",
+                  "icon-size": 0.5,
+                  visibility: isCompact ? "none" : "visible",
                 }}
               />
             </Source>
@@ -241,12 +323,41 @@ const MapComponent = ({
               <Layer
                 id={`${trackName}-points`}
                 type='circle'
+                minzoom={13}
                 paint={{
                   "circle-radius": getCircleRadius(),
-                  "circle-color": "#FF0000", // Red color for all points
-                  "circle-opacity": 0.8,
-                  "circle-stroke-width": 0.5,
-                  "circle-stroke-color": "#fff",
+                  "circle-color": "#ff4545",
+                  "circle-opacity": 0.9,
+                  "circle-stroke-width": 0.8,
+                  "circle-stroke-color": "white",
+                  "circle-stroke-opacity": 0.8,
+                  // Highlight on hover
+                  "circle-opacity-transition": { duration: 200 },
+                  "circle-stroke-opacity-transition": { duration: 200 },
+                }}
+              />
+
+              {/* Highlight effect on hover */}
+              <Layer
+                id={`${trackName}-points-hover`}
+                type='circle'
+                paint={{
+                  "circle-radius": getCircleRadius() + 3,
+                  "circle-color": "#ff4545",
+                  "circle-opacity": [
+                    "case",
+                    ["boolean", ["feature-state", "hover"], false],
+                    0.5,
+                    0,
+                  ],
+                  "circle-stroke-width": 2,
+                  "circle-stroke-color": "white",
+                  "circle-stroke-opacity": [
+                    "case",
+                    ["boolean", ["feature-state", "hover"], false],
+                    0.8,
+                    0,
+                  ],
                 }}
               />
             </Source>
@@ -277,7 +388,7 @@ const MapComponent = ({
       </Map>
 
       {/* Toggle button in the top-right corner - with compact version for mini-map */}
-      <div className={`absolute top-3 right-3 z-10`}>
+      <div className={`absolute top-3 right-${isCompact ? "3" : "16"} z-10`}>
         {isCompact ? (
           /* Compact toggle for mini-map */
           <button
@@ -308,13 +419,13 @@ const MapComponent = ({
           /* Full-size toggle for main map */
           <button
             onClick={toggleCoordinateType}
-            className='bg-white px-3 py-2 rounded-lg shadow-md text-sm font-semibold flex items-center space-x-1.5 transition-all hover:bg-gray-50 border border-gray-200'
+            className='glass px-4 py-3 rounded-xl shadow-lg text-sm font-semibold flex items-center space-x-2 transition-all hover:shadow-xl border border-white/30'
           >
             <svg
               xmlns='http://www.w3.org/2000/svg'
               viewBox='0 0 20 20'
               fill='currentColor'
-              className={`w-4 h-4 ${
+              className={`w-5 h-5 ${
                 useSnappedCoordinates ? "text-blue-600" : "text-gray-600"
               }`}
             >
@@ -326,25 +437,36 @@ const MapComponent = ({
             </svg>
             <span
               className={
-                useSnappedCoordinates ? "text-blue-600" : "text-gray-600"
+                useSnappedCoordinates
+                  ? "text-blue-600 font-bold"
+                  : "text-gray-600"
               }
             >
               {useSnappedCoordinates ? "Snapped Path" : "Original Path"}
             </span>
             <div
-              className={`w-8 h-4 rounded-full p-0.5 ml-1 ${
+              className={`w-10 h-5 rounded-full p-0.5 ml-1 transition-colors duration-300 ${
                 useSnappedCoordinates ? "bg-blue-500" : "bg-gray-300"
               }`}
             >
               <div
-                className={`w-3 h-3 rounded-full bg-white transform duration-200 ease-in-out ${
-                  useSnappedCoordinates ? "translate-x-4" : "translate-x-0"
+                className={`w-4 h-4 rounded-full bg-white transform duration-300 ease-in-out shadow-md ${
+                  useSnappedCoordinates ? "translate-x-5" : "translate-x-0"
                 }`}
               ></div>
             </div>
           </button>
         )}
       </div>
+
+      {/* Instructions overlay - only on main map */}
+      {!isCompact && (
+        <div className='absolute left-4 bottom-16 glass p-3 rounded-lg shadow-lg max-w-xs text-sm opacity-80 hover:opacity-100 transition-opacity duration-300'>
+          <p className='font-medium'>
+            Click on any red point to view the street image at that location.
+          </p>
+        </div>
+      )}
     </div>
   );
 };

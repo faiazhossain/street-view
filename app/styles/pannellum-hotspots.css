@@ -7,16 +7,22 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  background: rgba(90, 90, 90, 0.7); /* Gray background */
+  background: rgba(0, 0, 0, 0.5);
   color: white;
   cursor: pointer;
   position: absolute;
   margin-top: 160px;
+  backdrop-filter: blur(4px);
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .custom-hotspot:hover {
-  background: rgba(120, 120, 120, 0.9); /* Darker gray on hover */
-  transform: scale(1.1);
+  background: rgba(48, 79, 254, 0.8);
+  transform: scale(1.15);
+  border-color: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4), 0 0 15px rgba(48, 79, 254, 0.6);
 }
 
 .hotspot-icon {
@@ -27,26 +33,31 @@
 .hotspot-icon svg {
   width: 32px;
   height: 32px;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.3));
 }
 
 .hotspot-text {
   position: absolute;
-  bottom: -18px;
+  bottom: -22px;
   white-space: nowrap;
-  background: rgba(0, 0, 0, 0.6);
-  padding: 2px 4px;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 4px 8px;
   border-radius: 4px;
   opacity: 1; /* Always show the text */
   font-weight: bold;
-  font-size: 10px;
+  font-size: 11px;
   text-align: center;
   left: 50%;
   transform: translateX(-50%);
+  letter-spacing: 1px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .custom-hotspot:hover .hotspot-text {
   opacity: 1;
   background: rgba(0, 0, 0, 0.8);
+  transform: translateX(-50%) scale(1.1);
 }
 
 /* Ensure pannellum positions the hotspots properly */
@@ -57,24 +68,26 @@
 
 .next-hotspot {
   /* Styling for next button */
-  background: rgba(90, 90, 90, 0.2); /* Gray background */
+  background: rgba(66, 133, 244, 0.7);
   border: 2px solid rgba(255, 255, 255, 0.8);
   transform-origin: center center;
 }
 
 .next-hotspot:hover {
-  background: rgba(120, 120, 120, 0.6); /* Darker gray on hover */
+  background: rgba(66, 133, 244, 0.9);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4), 0 0 15px rgba(66, 133, 244, 0.6);
 }
 
 .prev-hotspot {
   /* Styling for prev button */
-  background: rgba(90, 90, 90, 0.2); /* Gray background */
+  background: rgba(52, 168, 83, 0.7);
   border: 2px solid rgba(255, 255, 255, 0.8);
   transform-origin: center center;
 }
 
 .prev-hotspot:hover {
-  background: rgba(120, 120, 120, 0.6); /* Darker gray on hover */
+  background: rgba(52, 168, 83, 0.9);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4), 0 0 15px rgba(52, 168, 83, 0.6);
 }
 
 /* Ensure hotspots are always visible regardless of view angle */
@@ -85,7 +98,7 @@
 /* Fixed navigation controls */
 .fixed-nav-controls {
   position: absolute;
-  right: 20px;
+  right: 30px;
   top: 50%;
   transform: translateY(-50%);
   display: flex;
@@ -96,21 +109,22 @@
 .vertical-nav-buttons {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 20px;
 }
 
 .nav-btn {
-  width: 60px;
-  height: 60px;
+  width: 70px;
+  height: 70px;
   border-radius: 50%;
-  background: rgba(0, 0, 0, 0.6);
   display: flex;
   justify-content: center;
   align-items: center;
   cursor: pointer;
-  transition: all 0.2s ease;
-  border: 2px solid rgba(255, 255, 255, 0.7);
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  border: 3px solid rgba(255, 255, 255, 0.8);
   position: relative;
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
 }
 
 .nav-content {
@@ -121,35 +135,41 @@
 }
 
 .nav-text {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: bold;
-  margin-top: 2px;
+  margin-top: 4px;
   color: white;
-  text-shadow: 0 0 3px #000;
+  text-shadow: 0 0 8px rgba(0, 0, 0, 0.7), 0 2px 4px rgba(0, 0, 0, 0.5);
+  letter-spacing: 1px;
 }
 
 .prev-btn {
-  background: rgba(0, 255, 47, 0.6);
+  background: rgba(52, 168, 83, 0.8);
 }
 
 .prev-btn:hover {
-  background: rgba(0, 255, 47, 0.9);
-  transform: scale(1.1);
+  background: rgba(52, 168, 83, 0.95);
+  transform: scale(1.1) translateY(-5px);
+  box-shadow: 0 12px 25px rgba(0, 0, 0, 0.25), 0 0 20px rgba(52, 168, 83, 0.4);
+  border-color: rgba(255, 255, 255, 1);
 }
 
 .next-btn {
-  background: rgba(0, 120, 255, 0.6);
+  background: rgba(66, 133, 244, 0.8);
 }
 
 .next-btn:hover {
-  background: rgba(0, 120, 255, 0.9);
-  transform: scale(1.1);
+  background: rgba(66, 133, 244, 0.95);
+  transform: scale(1.1) translateY(-5px);
+  box-shadow: 0 12px 25px rgba(0, 0, 0, 0.25), 0 0 20px rgba(66, 133, 244, 0.4);
+  border-color: rgba(255, 255, 255, 1);
 }
 
 .nav-arrow {
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   transition: transform 0.3s ease;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.3));
 }
 
 .down-arrow {
@@ -183,8 +203,8 @@
 /* HD Toggle Button Styling */
 .hd-toggle-container {
   position: absolute;
-  bottom: 60px;
-  right: 4px;
+  bottom: 80px;
+  right: 16px;
   display: flex;
   justify-content: center;
   z-index: 100;

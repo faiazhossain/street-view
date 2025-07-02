@@ -19,8 +19,9 @@ const ImageViewer = ({
   onImageSelect,
 }) => {
   const [isAutoPlaying, setIsAutoPlaying] = useState(false);
-  const [showMiniMap, setShowMiniMap] = useState(true); // Default to hidden for cleaner view
+  const [showMiniMap, setShowMiniMap] = useState(true); // Default to shown
   const timerRef = useRef(null);
+  const [fadeIn, setFadeIn] = useState(true); // For transition animations
 
   // Toggle auto-play functionality
   const toggleAutoPlay = () => {
@@ -35,14 +36,14 @@ const ImageViewer = ({
   // Start or stop the auto-play timer based on isAutoPlaying state
   useEffect(() => {
     if (isAutoPlaying) {
-      // Set a timer with a longer delay (8 seconds) to allow users to view each panorama
+      // Set a timer with a longer delay (6 seconds) to allow users to view each panorama
       timerRef.current = setTimeout(() => {
         onNextImage();
         // After the first image change, set up the interval for subsequent changes
         timerRef.current = setInterval(() => {
           onNextImage();
-        }, 4000); // 4 seconds between image changes
-      }, 4000); // Wait 4 seconds before changing the first image
+        }, 6000); // 6 seconds between image changes
+      }, 6000); // Wait 6 seconds before changing the first image
     } else {
       // Clear all timers when autoplay is stopped
       if (timerRef.current) {
@@ -61,6 +62,16 @@ const ImageViewer = ({
     };
   }, [isAutoPlaying, onNextImage]);
 
+  // Animation effect when switching images
+  useEffect(() => {
+    setFadeIn(true);
+    const timer = setTimeout(() => {
+      setFadeIn(false);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [selectedImage?.properties?.id]);
+
   // Use keyboard navigation hook
   useKeyboardNavigation({
     onPrev: onPrevImage,
@@ -72,10 +83,14 @@ const ImageViewer = ({
   if (!selectedImage) return null;
 
   return (
-    <div className='fixed inset-0 z-50 flex flex-col items-center justify-center bg-black bg-opacity-95'>
-      <div className='relative max-w-7xl w-full h-full flex flex-col'>
+    <div className='fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/95 backdrop-blur-sm'>
+      <div
+        className={`relative max-w-full w-full h-full flex flex-col ${
+          fadeIn ? "fade-in" : ""
+        }`}
+      >
         <ViewerHeader
-          title={`Image: ${selectedImage.properties.id}`}
+          title={`Location: ${selectedImage.properties.id}`}
           onClose={onClose}
         />
 
@@ -89,7 +104,7 @@ const ImageViewer = ({
 
           {/* Mini Map in bottom-left corner with toggle button inside the top-right of map */}
           {showMiniMap && (
-            <div className='absolute bottom-4 left-4 w-64 h-48 z-10 rounded-lg overflow-hidden shadow-lg border-2 border-gray-800'>
+            <div className='absolute bottom-4 left-4 w-64 h-48 z-10 rounded-xl overflow-hidden shadow-xl border border-gray-800/30 glass scale-in'>
               <MapComponent
                 imageData={{ features: images }}
                 pathData={pathData}
@@ -99,7 +114,7 @@ const ImageViewer = ({
               />
               <button
                 onClick={toggleMiniMap}
-                className='absolute top-1 right-1 bg-black bg-opacity-70 text-white hover:bg-opacity-90 rounded-full p-1 z-20 shadow-md transition-colors'
+                className='absolute top-2 right-2 bg-black/70 text-white hover:bg-black/90 rounded-full p-1.5 z-20 shadow-md transition-colors'
                 title='Hide mini map'
               >
                 <svg
@@ -118,7 +133,7 @@ const ImageViewer = ({
           {!showMiniMap && (
             <button
               onClick={toggleMiniMap}
-              className='absolute bottom-4 left-4 bg-black bg-opacity-70 text-white hover:bg-opacity-90 rounded-md px-3 py-2 shadow-lg transition-colors flex items-center space-x-2'
+              className='absolute bottom-4 left-4 glass text-white hover:bg-black/75 rounded-full p-3 shadow-lg transition-all duration-300 ease-in-out transform hover:scale-110'
               title='Show mini map'
             >
               <svg
@@ -133,7 +148,6 @@ const ImageViewer = ({
                   clipRule='evenodd'
                 />
               </svg>
-              <span>Map</span>
             </button>
           )}
         </div>
@@ -142,6 +156,33 @@ const ImageViewer = ({
           isAutoPlaying={isAutoPlaying}
           toggleAutoPlay={toggleAutoPlay}
         />
+
+        {/* Floating image information badge */}
+        <div className='absolute top-20 left-8 glass px-4 py-2 rounded-xl text-sm shadow-lg opacity-75 hover:opacity-100 transition-opacity z-50'>
+          <div className='flex items-center space-x-2'>
+            <svg
+              xmlns='http://www.w3.org/2000/svg'
+              className='h-4 w-4 text-blue-500'
+              fill='none'
+              viewBox='0 0 24 24'
+              stroke='currentColor'
+            >
+              <path
+                strokeLinecap='round'
+                strokeLinejoin='round'
+                strokeWidth={2}
+                d='M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z'
+              />
+            </svg>
+            <span>
+              Image{" "}
+              {images.findIndex(
+                (img) => img.properties.id === selectedImage.properties.id
+              ) + 1}{" "}
+              of {images.length}
+            </span>
+          </div>
+        </div>
       </div>
     </div>
   );

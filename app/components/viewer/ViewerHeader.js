@@ -2,40 +2,31 @@
 
 import React from "react";
 import { useTheme } from "../../context/ThemeContext";
-
+import { TbSunFilled } from "react-icons/tb";
 const ViewerHeader = ({ title, onClose }) => {
   const { darkMode, toggleDarkMode } = useTheme();
 
   return (
-    <div className='flex justify-between items-center p-4 text-white'>
-      <h2 className='text-xl font-bold'>{title}</h2>
+    <div className='flex justify-between items-center p-4 text-white glass border-b border-white/10 backdrop-blur-md'>
+      <h2 className='text-xl font-bold gradient-text'>{title}</h2>
       <div className='flex items-center space-x-4'>
         {/* Dark Mode Toggle Button */}
         <button
           onClick={toggleDarkMode}
-          className='flex items-center justify-center p-2 rounded-full bg-gray-700 hover:bg-gray-600 transition-colors'
+          className='flex items-center justify-center p-2.5 rounded-full glass hover:bg-gray-700/70 transition-colors'
           aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
           title={darkMode ? "Switch to light mode" : "Switch to dark mode"}
         >
           {darkMode ? (
             // Sun icon for light mode
-            <svg
-              xmlns='http://www.w3.org/2000/svg'
-              className='h-5 w-5'
-              viewBox='0 0 20 20'
-              fill='currentColor'
-            >
-              <path
-                fillRule='evenodd'
-                d='M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z'
-                clipRule='evenodd'
-              />
-            </svg>
+            <div className='flex items-center justify-center text-yellow-300 text-xl'>
+              <TbSunFilled />
+            </div>
           ) : (
             // Moon icon for dark mode
             <svg
               xmlns='http://www.w3.org/2000/svg'
-              className='h-5 w-5'
+              className='h-5 w-5 text-blue-200'
               viewBox='0 0 20 20'
               fill='currentColor'
             >
@@ -47,12 +38,12 @@ const ViewerHeader = ({ title, onClose }) => {
         {/* Close button */}
         <button
           onClick={onClose}
-          className='rounded-full bg-red-600 p-2 hover:bg-red-700'
+          className='rounded-full glass bg-red-600/80 hover:bg-red-700 p-2.5 transition-all duration-300 hover:scale-110'
           aria-label='Close viewer'
         >
           <svg
             xmlns='http://www.w3.org/2000/svg'
-            className='h-6 w-6'
+            className='h-5 w-5'
             fill='none'
             viewBox='0 0 24 24'
             stroke='currentColor'

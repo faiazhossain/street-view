@@ -10,8 +10,9 @@ const SelectedMarker = ({ feature }) => {
       longitude={feature.geometry.coordinates[0]}
       latitude={feature.geometry.coordinates[1]}
       anchor='bottom'
+      pitchAlignment='map'
     >
-      <div className='marker selected-marker'>
+      <div className='marker selected-marker scale-in'>
         <div className='marker-pin' />
       </div>
     </Marker>
