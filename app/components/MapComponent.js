@@ -10,6 +10,7 @@ const MapComponent = ({
   pathData,
   selectedImageId,
   onImageSelect,
+  isCompact = false,
   mapStyle = "https://map.barikoi.com/styles/barikoi-light/style.json?key=NDE2NzpVNzkyTE5UMUoy",
 }) => {
   const [viewState, setViewState] = useState({
@@ -265,14 +266,74 @@ const MapComponent = ({
             })}
       </Map>
 
-      {/* Toggle button in the top-right corner */}
-      <div className='absolute top-2 right-2 z-10'>
-        <button
-          onClick={toggleCoordinateType}
-          className='bg-white px-3 py-1 rounded shadow text-sm font-medium text-gray-700 hover:bg-gray-100 focus:outline-none'
-        >
-          {useSnappedCoordinates ? "Using: Snapped" : "Using: Original"}
-        </button>
+      {/* Toggle button in the top-right corner - with compact version for mini-map */}
+      <div className={`absolute top-3 right-3 z-10`}>
+        {isCompact ? (
+          /* Compact toggle for mini-map */
+          <button
+            onClick={toggleCoordinateType}
+            className='bg-white bg-opacity-70 p-1 rounded shadow-sm flex items-center text-xs border border-gray-200'
+            title={
+              useSnappedCoordinates
+                ? "Using: Snapped Path"
+                : "Using: Original Path"
+            }
+          >
+            <div
+              className={`w-6 h-3 rounded-full relative ${
+                useSnappedCoordinates ? "bg-blue-500" : "bg-gray-300"
+              }`}
+            >
+              <div
+                className={`absolute w-2.5 h-2.5 rounded-full bg-white shadow-sm transform transition-transform duration-200 ease-in-out ${
+                  useSnappedCoordinates ? "translate-x-3" : "translate-x-0.5"
+                } top-[1px]`}
+              ></div>
+            </div>
+            <span className='ml-1 text-[10px] font-medium'>
+              {useSnappedCoordinates ? "S" : "O"}
+            </span>
+          </button>
+        ) : (
+          /* Full-size toggle for main map */
+          <button
+            onClick={toggleCoordinateType}
+            className='bg-white px-3 py-2 rounded-lg shadow-md text-sm font-semibold flex items-center space-x-1.5 transition-all hover:bg-gray-50 border border-gray-200'
+          >
+            <svg
+              xmlns='http://www.w3.org/2000/svg'
+              viewBox='0 0 20 20'
+              fill='currentColor'
+              className={`w-4 h-4 ${
+                useSnappedCoordinates ? "text-blue-600" : "text-gray-600"
+              }`}
+            >
+              <path
+                fillRule='evenodd'
+                d='M9.69 18.933l.003.001C9.89 19.02 10 19 10 19s.11.02.308-.066l.002-.001.006-.003.018-.008a5.741 5.741 0 00.281-.14c.186-.096.446-.24.757-.433.62-.384 1.445-.966 2.274-1.765C15.302 14.988 17 12.493 17 9A7 7 0 103 9c0 3.492 1.698 5.988 3.355 7.584a13.731 13.731 0 002.273 1.765 11.842 11.842 0 00.976.544l.062.029.018.008.006.003zM10 11.25a2.25 2.25 0 100-4.5 2.25 2.25 0 000 4.5z'
+                clipRule='evenodd'
+              />
+            </svg>
+            <span
+              className={
+                useSnappedCoordinates ? "text-blue-600" : "text-gray-600"
+              }
+            >
+              {useSnappedCoordinates ? "Snapped Path" : "Original Path"}
+            </span>
+            <div
+              className={`w-8 h-4 rounded-full p-0.5 ml-1 ${
+                useSnappedCoordinates ? "bg-blue-500" : "bg-gray-300"
+              }`}
+            >
+              <div
+                className={`w-3 h-3 rounded-full bg-white transform duration-200 ease-in-out ${
+                  useSnappedCoordinates ? "translate-x-4" : "translate-x-0"
+                }`}
+              ></div>
+            </div>
+          </button>
+        )}
       </div>
     </div>
   );
