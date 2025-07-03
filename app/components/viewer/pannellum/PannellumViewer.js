@@ -1,19 +1,20 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useRef } from 'react';
-import Script from 'next/script';
-import { useDispatch, useSelector } from 'react-redux';
+import { useState, useEffect, useRef } from "react";
+import Script from "next/script";
+import { useDispatch, useSelector } from "react-redux";
 import {
   saveViewPosition,
   selectViewPosition,
-} from '@/app/redux/slices/panoramaSlice';
+} from "@/app/redux/slices/panoramaSlice";
+import { selectShowControls } from "@/app/redux/slices/uiControlsSlice";
 
 // Create a ref that persists across component mounts to track script loading
 let scriptLoadedGlobal = false;
 
 // Helper function to use direct image URLs (no proxy needed)
 const processImageUrl = (url) => {
-  if (!url) return '';
+  if (!url) return "";
 
   // Return the URL as-is since we're using direct URLs from the server
   return url;
@@ -36,6 +37,7 @@ const PannellumViewer = ({
   const savedViewPosition = useSelector((state) =>
     selectViewPosition(state, selectedImage?.properties?.id)
   );
+  const showControls = useSelector(selectShowControls); // Get the UI controls visibility state
 
   // Handle script loading
   const handleScriptLoad = () => {
@@ -85,7 +87,7 @@ const PannellumViewer = ({
           // console.log(`Saved position for ${selectedImage.properties.id}:`, position);
         }
       } catch (error) {
-        console.error('Error saving view position:', error);
+        console.error("Error saving view position:", error);
       }
     }
   };
@@ -98,16 +100,16 @@ const PannellumViewer = ({
     if (pannellumInstance) {
       try {
         // Try to call the proper destroy method if available
-        if (typeof pannellumInstance.destroy === 'function') {
+        if (typeof pannellumInstance.destroy === "function") {
           pannellumInstance.destroy();
         }
       } catch (error) {
-        console.error('Error destroying pannellum instance:', error);
+        console.error("Error destroying pannellum instance:", error);
       }
 
       // Fallback cleanup - clear the HTML
       if (viewerRef.current) {
-        viewerRef.current.innerHTML = '';
+        viewerRef.current.innerHTML = "";
       }
 
       setPannellumInstance(null);
@@ -136,7 +138,7 @@ const PannellumViewer = ({
         try {
           // Make sure the element is empty
           if (viewerRef.current) {
-            viewerRef.current.innerHTML = '';
+            viewerRef.current.innerHTML = "";
             // Store the current image ID on the DOM element for reference
             viewerRef.current._currentImageId = currentImageId;
           }
@@ -146,8 +148,79 @@ const PannellumViewer = ({
             (img) => img.properties.id === selectedImage?.properties.id
           );
 
-          // Create hotspots for navigation
+          // Create hotspots for navigation - only if showControls is true
           const hotSpots = [];
+
+          if (showControls) {
+            // Fixed positions for next and prev hotspots
+            // Use constant positions instead of calculating based on initialYaw
+            const nextYaw = 0; // Fixed position for next (forward/up direction)
+            const prevYaw = 180; // Fixed position for prev (backward/down direction)
+
+            // Add Next button hotspot if not the last image
+            if (currentIndex < images.length - 1) {
+              hotSpots.push({
+                pitch: 0,
+                yaw: nextYaw,
+                type: "custom",
+                cssClass: "custom-hotspot next-hotspot",
+                createTooltipFunc: (hotSpotDiv) => {
+                  hotSpotDiv.classList.add("custom-tooltip");
+
+                  // Create SVG element for the icon (pointing up)
+                  const nextIcon = document.createElement("div");
+                  nextIcon.innerHTML = `<svg fill="#fff" height="200px" width="200px" version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 330 330" xml:space="preserve"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path id="XMLID_224_" d="M325.606,229.393l-150.004-150C172.79,76.58,168.974,75,164.996,75c-3.979,0-7.794,1.581-10.607,4.394 l-149.996,150c-5.858,5.858-5.858,15.355,0,21.213c5.857,5.857,15.355,5.858,21.213,0l139.39-139.393l139.397,139.393 C307.322,253.536,311.161,255,315,255c3.839,0,7.678-1.464,10.607-4.394C331.464,244.748,331.464,235.251,325.606,229.393z" /> </g></svg>`;
+                  nextIcon.classList.add("hotspot-icon", "fixed-icon");
+                  hotSpotDiv.appendChild(nextIcon);
+
+                  const nextText = document.createElement("span");
+                  nextText.textContent = "NEXT";
+                  nextText.classList.add("hotspot-text");
+                  hotSpotDiv.appendChild(nextText);
+
+                  // Save current view position before navigating
+                  hotSpotDiv.addEventListener("click", () => {
+                    saveCurrentViewPosition();
+                    onNextImage();
+                  });
+                },
+              });
+            }
+
+            // Add Previous button hotspot if not the first image
+            if (currentIndex > 0) {
+              hotSpots.push({
+                pitch: 0,
+                yaw: prevYaw,
+                type: "custom",
+                cssClass: "custom-hotspot prev-hotspot",
+                createTooltipFunc: (hotSpotDiv) => {
+                  hotSpotDiv.classList.add("custom-tooltip");
+
+                  // Create SVG element for the icon (pointing down)
+                  const prevIcon = document.createElement("div");
+                  prevIcon.innerHTML = `<svg fill="#fff" width="800px" height="800px" viewBox="0 -6 524 524" xmlns="http://www.w3.org/2000/svg" ><title>down</title><path d="M64 191L98 157 262 320 426 157 460 191 262 387 64 191Z" /></svg>`;
+                  prevIcon.classList.add(
+                    "hotspot-icon",
+                    "fixed-icon",
+                    "down-icon"
+                  );
+                  hotSpotDiv.appendChild(prevIcon);
+
+                  const prevText = document.createElement("span");
+                  prevText.textContent = "PREV";
+                  prevText.classList.add("hotspot-text");
+                  hotSpotDiv.appendChild(prevText);
+
+                  // Save current view position before navigating
+                  hotSpotDiv.addEventListener("click", () => {
+                    saveCurrentViewPosition();
+                    onPrevImage();
+                  });
+                },
+              });
+            }
+          }
 
           // Get initialYaw from the saved position or the default from data
           // Use saved view position if available, otherwise use the default from image data
@@ -161,85 +234,16 @@ const PannellumViewer = ({
             ? savedViewPosition.hfov
             : selectedImage.properties.initialHfov || 100;
 
-          // Fixed positions for next and prev hotspots
-          // Use constant positions instead of calculating based on initialYaw
-          const nextYaw = 0; // Fixed position for next (forward/up direction)
-          const prevYaw = 180; // Fixed position for prev (backward/down direction)
-
-          // Add Next button hotspot if not the last image
-          if (currentIndex < images.length - 1) {
-            hotSpots.push({
-              pitch: 0,
-              yaw: nextYaw,
-              type: 'custom',
-              cssClass: 'custom-hotspot next-hotspot',
-              createTooltipFunc: (hotSpotDiv) => {
-                hotSpotDiv.classList.add('custom-tooltip');
-
-                // Create SVG element for the icon (pointing up)
-                const nextIcon = document.createElement('div');
-                nextIcon.innerHTML = `<svg fill="#fff" height="200px" width="200px" version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 330 330" xml:space="preserve"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path id="XMLID_224_" d="M325.606,229.393l-150.004-150C172.79,76.58,168.974,75,164.996,75c-3.979,0-7.794,1.581-10.607,4.394 l-149.996,150c-5.858,5.858-5.858,15.355,0,21.213c5.857,5.857,15.355,5.858,21.213,0l139.39-139.393l139.397,139.393 C307.322,253.536,311.161,255,315,255c3.839,0,7.678-1.464,10.607-4.394C331.464,244.748,331.464,235.251,325.606,229.393z"></path> </g></svg>`;
-                nextIcon.classList.add('hotspot-icon', 'fixed-icon');
-                hotSpotDiv.appendChild(nextIcon);
-
-                const nextText = document.createElement('span');
-                nextText.textContent = 'NEXT';
-                nextText.classList.add('hotspot-text');
-                hotSpotDiv.appendChild(nextText);
-
-                // Save current view position before navigating
-                hotSpotDiv.addEventListener('click', () => {
-                  saveCurrentViewPosition();
-                  onNextImage();
-                });
-              },
-            });
-          }
-
-          // Add Previous button hotspot if not the first image
-          if (currentIndex > 0) {
-            hotSpots.push({
-              pitch: 0,
-              yaw: prevYaw,
-              type: 'custom',
-              cssClass: 'custom-hotspot prev-hotspot',
-              createTooltipFunc: (hotSpotDiv) => {
-                hotSpotDiv.classList.add('custom-tooltip');
-
-                // Create SVG element for the icon (pointing down)
-                const prevIcon = document.createElement('div');
-                prevIcon.innerHTML = `<svg fill="#fff" width="800px" height="800px" viewBox="0 -6 524 524" xmlns="http://www.w3.org/2000/svg" ><title>down</title><path d="M64 191L98 157 262 320 426 157 460 191 262 387 64 191Z" /></svg>`;
-                prevIcon.classList.add(
-                  'hotspot-icon',
-                  'fixed-icon',
-                  'down-icon'
-                );
-                hotSpotDiv.appendChild(prevIcon);
-
-                const prevText = document.createElement('span');
-                prevText.textContent = 'PREV';
-                prevText.classList.add('hotspot-text');
-                hotSpotDiv.appendChild(prevText);
-
-                // Save current view position before navigating
-                hotSpotDiv.addEventListener('click', () => {
-                  saveCurrentViewPosition();
-                  onPrevImage();
-                });
-              },
-            });
-          }
-
           // Log the view values for debugging only when needed
-          if (process.env.NODE_ENV === 'development' && false) {
+          if (process.env.NODE_ENV === "development" && false) {
             // Set to true when debugging is needed
             console.log(
-              `Initial values - Yaw: ${initialYaw}, Pitch: ${initialPitch}, HFOV: ${initialHfov}, Next Yaw: ${nextYaw}, Prev Yaw: ${prevYaw}`
+              `Initial values - Yaw: ${initialYaw}, Pitch: ${initialPitch}, HFOV: ${initialHfov}`
             );
           }
 
           const viewer = window.pannellum.viewer(viewerRef.current.id, {
-            type: 'equirectangular',
+            type: "equirectangular",
             panorama: processImageUrl(
               isHDMode
                 ? selectedImage.properties.imageUrl_High ||
@@ -263,19 +267,19 @@ const PannellumViewer = ({
             keyboardZoom: true,
             hotSpots: hotSpots,
             onLoad: () => {
-              console.log('Pannellum onLoad callback fired');
+              console.log("Pannellum onLoad callback fired");
             },
             onError: (err) => {
-              console.error('Pannellum Error:', err);
+              console.error("Pannellum Error:", err);
             },
           });
 
           setPannellumInstance(viewer);
         } catch (err) {
-          console.error('Error initializing Pannellum:', err);
+          console.error("Error initializing Pannellum:", err);
         }
       } else {
-        console.error('Pannellum not available on window object');
+        console.error("Pannellum not available on window object");
       }
     }, 50); // Small delay to ensure DOM is ready
 
@@ -293,7 +297,24 @@ const PannellumViewer = ({
     savedViewPosition,
     dispatch,
     isHDMode,
+    showControls, // Add showControls as a dependency to re-render when it changes
   ]);
+
+  // Effect to handle visibility changes for existing hotspots
+  useEffect(() => {
+    // Find all hotspot elements and update their visibility based on showControls
+    if (viewerRef.current) {
+      const hotspots = viewerRef.current.querySelectorAll(".custom-hotspot");
+
+      hotspots.forEach((hotspot) => {
+        if (showControls) {
+          hotspot.style.display = "flex"; // Show hotspots
+        } else {
+          hotspot.style.display = "none"; // Hide hotspots
+        }
+      });
+    }
+  }, [showControls]);
 
   // Save the current view position periodically while user is interacting with the panorama
   useEffect(() => {
@@ -311,17 +332,17 @@ const PannellumViewer = ({
     };
 
     if (viewerRef.current) {
-      viewerRef.current.addEventListener('mousedown', handleInteraction);
-      viewerRef.current.addEventListener('wheel', handleInteraction);
-      viewerRef.current.addEventListener('touchstart', handleInteraction);
+      viewerRef.current.addEventListener("mousedown", handleInteraction);
+      viewerRef.current.addEventListener("wheel", handleInteraction);
+      viewerRef.current.addEventListener("touchstart", handleInteraction);
     }
 
     return () => {
       clearInterval(saveInterval);
       if (viewerRef.current) {
-        viewerRef.current.removeEventListener('mousedown', handleInteraction);
-        viewerRef.current.removeEventListener('wheel', handleInteraction);
-        viewerRef.current.removeEventListener('touchstart', handleInteraction);
+        viewerRef.current.removeEventListener("mousedown", handleInteraction);
+        viewerRef.current.removeEventListener("wheel", handleInteraction);
+        viewerRef.current.removeEventListener("touchstart", handleInteraction);
         clearTimeout(viewerRef.current.saveTimeout);
       }
     };
@@ -362,8 +383,8 @@ const PannellumViewer = ({
       {/* Pannellum viewer container with dynamic ID */}
       <div id={viewerId.current} ref={viewerRef} className='w-full h-full' />
 
-      {/* Fixed Navigation Controls */}
-      {pannellumInstance && selectedImage && (
+      {/* Fixed Navigation Controls - Only shown when showControls is true */}
+      {pannellumInstance && selectedImage && showControls && (
         <>
           <div className='fixed-nav-controls'>
             <div className='vertical-nav-buttons'>
@@ -425,11 +446,11 @@ const PannellumViewer = ({
           {/* HD Toggle Button - Separate from navigation controls */}
           <div className='hd-toggle-container'>
             <button
-              className={`hd-toggle-btn ${isHDMode ? 'active' : ''}`}
+              className={`hd-toggle-btn ${isHDMode ? "active" : ""}`}
               onClick={toggleHDMode}
               aria-label='Toggle HD mode'
             >
-              {isHDMode ? 'HD' : 'HD'}
+              {isHDMode ? "HD" : "HD"}
             </button>
           </div>
         </>

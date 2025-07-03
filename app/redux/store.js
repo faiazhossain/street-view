@@ -1,5 +1,6 @@
 import { configureStore } from "@reduxjs/toolkit";
 import panoramaReducer from "./slices/panoramaSlice";
+import uiControlsReducer from "./slices/uiControlsSlice";
 
 /**
  * Configure the Redux store for the application
@@ -8,6 +9,7 @@ import panoramaReducer from "./slices/panoramaSlice";
 export const store = configureStore({
   reducer: {
     panorama: panoramaReducer,
+    uiControls: uiControlsReducer,
     // Add other reducers here as needed
   },
 });

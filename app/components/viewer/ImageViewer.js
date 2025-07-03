@@ -2,6 +2,8 @@
 
 import { useRef, useState, useEffect } from "react";
 import { useKeyboardNavigation } from "../../hooks/useKeyboardNavigation";
+import { useSelector } from "react-redux";
+import { selectShowControls } from "../../redux/slices/uiControlsSlice";
 import PannellumViewer from "./pannellum/PannellumViewer";
 import ViewerHeader from "./ViewerHeader";
 import ViewerFooter from "./ViewerFooter";
@@ -22,6 +24,7 @@ const ImageViewer = ({
   const [showMiniMap, setShowMiniMap] = useState(true); // Default to shown
   const timerRef = useRef(null);
   const [fadeIn, setFadeIn] = useState(true); // For transition animations
+  const showControls = useSelector(selectShowControls); // Get UI controls visibility state from Redux
 
   // Toggle auto-play functionality
   const toggleAutoPlay = () => {
@@ -103,7 +106,7 @@ const ImageViewer = ({
           />
 
           {/* Mini Map in bottom-left corner with toggle button inside the top-right of map */}
-          {showMiniMap && (
+          {showMiniMap && showControls && (
             <div className='absolute bottom-4 left-4 w-64 h-48 z-10 rounded-xl overflow-hidden shadow-xl border border-gray-800/30 glass scale-in'>
               <MapComponent
                 imageData={{ features: images }}
@@ -130,7 +133,7 @@ const ImageViewer = ({
           )}
 
           {/* Toggle button when map is hidden - positioned in bottom left */}
-          {!showMiniMap && (
+          {(!showMiniMap || !showControls) && showControls && (
             <button
               onClick={toggleMiniMap}
               className='absolute bottom-4 left-4 glass text-white hover:bg-black/75 rounded-full p-3 shadow-lg transition-all duration-300 ease-in-out transform hover:scale-110'
@@ -144,7 +147,7 @@ const ImageViewer = ({
               >
                 <path
                   fillRule='evenodd'
-                  d='M8.161 2.58a1.875 1.875 0 011.678 0l4.993 2.498c.106.052.23.052.336 0l3.869-1.935A.75.75 0 0120 3.75v12.5a.75.75 0 01-1.037.696l-3.868-1.935a.75.75 0 00-.337 0l-4.992 2.498a1.875 1.875 0 01-1.679 0L3.896 14.96a.75.75 0 00-.336 0l-2.523 1.261A.75.75 0 010 15.526V3.75a.75.75 0 011.038-.696l2.522 1.261a.75.75 0 00.337 0l4.264-2.132z'
+                  d='M8.157 2.175a1.5 1.5 0 00-1.147 0l-4.084 1.69A1.5 1.5 0 002 5.251v10.877a1.5 1.5 0 002.074 1.386l3.51-1.453 4.26 1.763a1.5 1.5 0 001.146 0l4.083-1.69A1.5 1.5 0 0018 14.748V3.873a1.5 1.5 0 00-2.073-1.386l-3.51 1.452-4.26-1.763zM7.58 5a.75.75 0 01.75.75v6.5a.75.75 0 01-1.5 0v-6.5A.75.75 0 017.58 5zm5.59 2.75a.75.75 0 00-1.5 0v6.5a.75.75 0 001.5 0v-6.5z'
                   clipRule='evenodd'
                 />
               </svg>
@@ -152,37 +155,35 @@ const ImageViewer = ({
           )}
         </div>
 
-        <ViewerFooter
-          isAutoPlaying={isAutoPlaying}
-          toggleAutoPlay={toggleAutoPlay}
-        />
+        {showControls && (
+          <ViewerFooter
+            isAutoPlaying={isAutoPlaying}
+            toggleAutoPlay={toggleAutoPlay}
+          />
+        )}
 
         {/* Floating image information badge */}
-        <div className='absolute top-20 left-8 glass px-4 py-2 rounded-xl text-sm shadow-lg opacity-75 hover:opacity-100 transition-opacity z-50'>
-          <div className='flex items-center space-x-2'>
-            <svg
-              xmlns='http://www.w3.org/2000/svg'
-              className='h-4 w-4 text-blue-500'
-              fill='none'
-              viewBox='0 0 24 24'
-              stroke='currentColor'
-            >
-              <path
-                strokeLinecap='round'
-                strokeLinejoin='round'
-                strokeWidth={2}
-                d='M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z'
-              />
-            </svg>
-            <span>
-              Image{" "}
-              {images.findIndex(
-                (img) => img.properties.id === selectedImage.properties.id
-              ) + 1}{" "}
-              of {images.length}
-            </span>
+        {showControls && (
+          <div className='absolute top-20 left-8 glass px-4 py-2 rounded-xl text-sm shadow-lg opacity-75 hover:opacity-100 transition-opacity z-50'>
+            <div className='flex items-center space-x-2'>
+              <svg
+                xmlns='http://www.w3.org/2000/svg'
+                className='h-4 w-4 text-blue-500'
+                fill='none'
+                viewBox='0 0 24 24'
+                stroke='currentColor'
+              >
+                <path
+                  strokeLinecap='round'
+                  strokeLinejoin='round'
+                  strokeWidth={2}
+                  d='M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z'
+                />
+              </svg>
+              <span>Use your mouse to look around | Scroll to zoom</span>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
