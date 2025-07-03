@@ -9,7 +9,8 @@ import { useImageData } from "./data/imageData";
 export default function Home() {
   const [selectedImageId, setSelectedImageId] = useState(null);
   const [showViewer, setShowViewer] = useState(false);
-  const { imageData, imagePath, isLoading, error } = useImageData();
+  const { imageData, imagePath, isLoading, error, refreshData } =
+    useImageData();
 
   const handleImageSelect = useCallback((imageId) => {
     setSelectedImageId(imageId);
@@ -47,7 +48,7 @@ export default function Home() {
       )
     : null;
 
-  if (isLoading) {
+  if (isLoading && imageData.features.length === 0) {
     return (
       <PageLayout title='ThirdEye360' description='Loading ThirdEye360 data...'>
         <div className='flex items-center justify-center h-64'>
@@ -81,6 +82,8 @@ export default function Home() {
               pathData={imagePath}
               selectedImageId={selectedImageId}
               onImageSelect={handleImageSelect}
+              refreshData={refreshData}
+              isLoading={isLoading}
             />
           </div>
 

@@ -4,10 +4,12 @@
 export async function GET() {
   try {
     // Make the request to your API server
-    const response = await fetch('http://202.72.236.166:8001/api/features', {
+    const response = await fetch("http://202.72.236.166:8001/api/features", {
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
+      // Add cache: 'no-store' to prevent reusing previous response
+      cache: "no-store",
     });
 
     if (!response.ok) {
@@ -19,14 +21,14 @@ export async function GET() {
 
     // Validate data format
     if (!rawData || !rawData.data || !Array.isArray(rawData.data)) {
-      throw new Error('Invalid API response format');
+      throw new Error("Invalid API response format");
     }
 
     // Format data for the map component (GeoJSON format)
     const formattedData = {
-      type: 'FeatureCollection',
+      type: "FeatureCollection",
       features: rawData.data.map((item) => ({
-        type: 'Feature',
+        type: "Feature",
         properties: {
           id: item.feature_id || item.id,
           // Use direct image URLs from server
@@ -45,7 +47,7 @@ export async function GET() {
           created_at: item.created_at,
         },
         geometry: {
-          type: 'Point',
+          type: "Point",
           // Use snapped coordinates for map display
           coordinates: [
             parseFloat(item.longitude_snapped || item.longitude_original || 0),
@@ -59,22 +61,23 @@ export async function GET() {
     return new Response(JSON.stringify(formattedData), {
       status: 200,
       headers: {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'public, max-age=300', // Cache for 5 minutes
+        "Content-Type": "application/json",
+        // Disable caching to ensure fresh data
+        "Cache-Control": "no-store, max-age=0, must-revalidate",
       },
     });
   } catch (error) {
-    console.error('API Error:', error);
+    console.error("API Error:", error);
 
     return new Response(
       JSON.stringify({
-        status: 'error',
+        status: "error",
         message: error.message,
       }),
       {
         status: 500,
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
       }
     );

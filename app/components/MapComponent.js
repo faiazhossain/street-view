@@ -11,6 +11,7 @@ import Map, {
 import SelectedMarker from "./map/SelectedMarker";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useTheme } from "../context/ThemeContext";
+import { IoRefreshOutline } from "react-icons/io5";
 
 const MapComponent = ({
   imageData,
@@ -19,8 +20,19 @@ const MapComponent = ({
   onImageSelect,
   isCompact = false,
   customMapStyle = null,
+  refreshData,
+  isLoading,
 }) => {
   const { darkMode } = useTheme();
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Handle refresh click
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    refreshData();
+    // Add a small timeout to show the spinning animation
+    setTimeout(() => setIsRefreshing(false), 1000);
+  };
 
   // Dynamically set map style based on theme
   const mapStyle =
@@ -47,6 +59,35 @@ const MapComponent = ({
   const toggleCoordinateType = () => {
     setUseSnappedCoordinates((prev) => !prev);
   };
+
+  // Effect to update map view when selected image changes
+  useEffect(() => {
+    if (
+      selectedImageId &&
+      imageData.features &&
+      imageData.features.length > 0
+    ) {
+      const selectedFeature = imageData.features.find(
+        (feature) => feature.properties.id === selectedImageId
+      );
+
+      if (selectedFeature) {
+        const [lon, lat] = getCoordinates(selectedFeature);
+
+        // Update the map view to center on the selected image
+        setViewState((prev) => ({
+          ...prev,
+          longitude: lon,
+          latitude: lat,
+          // We maintain the current zoom level or set it to a reasonable level if needed
+          zoom: prev.zoom < 13 ? 15 : prev.zoom,
+          // Optional: animate transition with a slight duration
+          transitionDuration: 500,
+          padding: [50, 50, 50, 50], // Add padding around the view
+        }));
+      }
+    }
+  }, [selectedImageId, imageData.features, useSnappedCoordinates]);
 
   // Calculate circle radius based on zoom level
   const getCircleRadius = () => {
@@ -386,6 +427,26 @@ const MapComponent = ({
               );
             })}
       </Map>
+
+      {/* Refresh button in the top-left corner */}
+      {!isCompact && (
+        <div className='absolute top-28 right-1 z-10'>
+          <button
+            onClick={handleRefresh}
+            disabled={isLoading || isRefreshing}
+            className='glass p-2.5 rounded-xl shadow-md hover:shadow-lg transition-all border border-white/30 flex items-center justify-center'
+            title='Refresh data'
+          >
+            <IoRefreshOutline
+              className={`w-5 h-5 ${
+                isRefreshing || isLoading
+                  ? "animate-spin text-blue-500"
+                  : "text-gray-700"
+              }`}
+            />
+          </button>
+        </div>
+      )}
 
       {/* Toggle button in the top-right corner - with compact version for mini-map */}
       <div className={`absolute top-3 right-${isCompact ? "3" : "16"} z-10`}>

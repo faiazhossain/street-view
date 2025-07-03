@@ -33,7 +33,7 @@ const ViewerHeader = ({ title, onClose }) => {
             // Icon for when controls are shown - eye open
             <svg
               xmlns='http://www.w3.org/2000/svg'
-              className='h-5 w-5 text-white'
+              className='h-5 w-5 text-yellow-400'
               viewBox='0 0 20 20'
               fill='currentColor'
             >
