@@ -9,6 +9,8 @@ import ViewerHeader from "./ViewerHeader";
 import ViewerFooter from "./ViewerFooter";
 import MapComponent from "../MapComponent";
 import "../../styles/pannellum-hotspots.css";
+import { FaLocationArrow } from "react-icons/fa";
+import { FcCompactCamera } from "react-icons/fc";
 
 const ImageViewer = ({
   selectedImage,
@@ -34,6 +36,30 @@ const ImageViewer = ({
   // Toggle mini-map visibility
   const toggleMiniMap = () => {
     setShowMiniMap((prev) => !prev);
+  };
+
+  // Format date for display
+  const formatDate = (dateString) => {
+    if (!dateString) return "N/A";
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(date);
+  };
+
+  // Format date in a more compact way for the floating info
+  const formatCompactDate = (dateString) => {
+    if (!dateString) return "N/A";
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    }).format(date);
   };
 
   // Start or stop the auto-play timer based on isAutoPlaying state
@@ -92,10 +118,7 @@ const ImageViewer = ({
           fadeIn ? "fade-in" : ""
         }`}
       >
-        <ViewerHeader
-          title={`Location: ${selectedImage.properties.id}`}
-          onClose={onClose}
-        />
+        <ViewerHeader title={`ThirdEye360`} onClose={onClose} />
 
         <div className='relative flex-grow overflow-hidden'>
           <PannellumViewer
@@ -104,6 +127,54 @@ const ImageViewer = ({
             onPrevImage={onPrevImage}
             onNextImage={onNextImage}
           />
+
+          {/* Floating Image Information - Always visible on top right */}
+          {showControls && (
+            <div className='absolute top-4 right-4 bg-black/70 backdrop-blur-sm text-white px-4 py-3 rounded-lg shadow-xl z-50 max-w-xs animate-fade-in border border-white/10'>
+              <div className='space-y-2 text-sm'>
+                {/* Location ID
+                <div className='flex items-center space-x-2'>
+                  <FaLocationArrow className='text-blue-400 shrink-0' />
+                  <div className='truncate'>
+                    <span className='text-gray-400 text-xs'>ID: </span>
+                    <span className='text-white/90'>
+                      {selectedImage.properties.id}
+                    </span>
+                  </div>
+                </div> */}
+                {/* Coordinates
+                <div className='flex items-center space-x-2'>
+                  <FaMapMarkerAlt className='text-red-400 shrink-0' />
+                  <div className='grid grid-cols-1 gap-0'>
+                    <div className='text-xs'>
+                      <span className='text-white/90'>
+                        {selectedImage.properties.latitude_snapped?.toFixed(
+                          6
+                        ) || "N/A"}
+                      </span>
+                      <span className='text-gray-400'> , </span>
+                      <span className='text-white/90'>
+                        {selectedImage.properties.longitude_snapped?.toFixed(
+                          6
+                        ) || "N/A"}
+                      </span>
+                    </div>
+                    <div className='text-xs'></div>
+                  </div>
+                </div> */}
+                {/* Created At */}
+                <div className='flex items-center space-x-2'>
+                  <FcCompactCamera className='text-xl' />
+                  <div>
+                    <span className='text-gray-400 text-xs'>Captured: </span>
+                    <span className='text-white/90'>
+                      {formatCompactDate(selectedImage.properties.created_at)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Mini Map in bottom-left corner with toggle button inside the top-right of map */}
           {showMiniMap && showControls && (
