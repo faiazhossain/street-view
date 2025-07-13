@@ -7,6 +7,7 @@ import Map, {
   NavigationControl,
   ScaleControl,
   AttributionControl,
+  Marker,
 } from "react-map-gl/maplibre";
 import SelectedMarker from "./map/SelectedMarker";
 import "maplibre-gl/dist/maplibre-gl.css";
@@ -25,6 +26,10 @@ const MapComponent = ({
 }) => {
   const { darkMode } = useTheme();
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [hoveredPoint, setHoveredPoint] = useState(null);
+  const [isHoveringPath, setIsHoveringPath] = useState(false);
+  const [nearbyPoints, setNearbyPoints] = useState([]); // New state for nearby points
+  const [hoverRadius, setHoverRadius] = useState(0.001); // Configurable hover radius (in degrees)
 
   // Handle refresh click
   const handleRefresh = () => {
@@ -232,23 +237,238 @@ const MapComponent = ({
 
   const onMapClick = useCallback(
     (event) => {
-      // Handle when the user clicks on the map but not on a marker
+      // Get features at click point
       const features = event.features || [];
 
       if (features.length > 0) {
         const feature = features[0];
-        if (feature.properties && feature.properties.id) {
+        const featureId = feature.layer.id;
+        const featureProps = feature.properties;
+
+        // Check if the user clicked on a cluster
+        if (
+          featureId &&
+          (featureId.endsWith("-clusters") ||
+            featureId.endsWith("-cluster-count"))
+        ) {
+          // Get the cluster source
+          const trackName = featureId.split("-")[0];
+          const mapInstance = event.target;
+          const source = mapInstance.getSource(`${trackName}-points-source`);
+
+          // Zoom in on cluster when clicked
+          const clusterId = featureProps.cluster_id;
+          source.getClusterExpansionZoom(clusterId, (err, zoom) => {
+            if (err) return;
+
+            // Zoom in to the cluster
+            mapInstance.easeTo({
+              center: feature.geometry.coordinates,
+              zoom: zoom + 0.5, // Add a bit of extra zoom for better visibility
+              duration: 500,
+            });
+          });
+        }
+        // Handle clicks on individual unclustered points
+        else if (
+          featureId &&
+          featureId.endsWith("-points") &&
+          feature.properties &&
+          feature.properties.id
+        ) {
           onImageSelect(feature.properties.id);
+        }
+        // Handle clicks on path lines
+        else if (featureId && featureId.endsWith("-path-line")) {
+          const trackName = featureId.replace("-path-line", "");
+          const trackFeatures = trackGroups[trackName]?.features;
+
+          if (trackFeatures && trackFeatures.length > 0) {
+            // Get click coordinates
+            const clickPoint = [event.lngLat.lng, event.lngLat.lat];
+
+            // Find the closest point in this track
+            let closestFeature = null;
+            let minDistance = Infinity;
+
+            trackFeatures.forEach((feature) => {
+              const [lon, lat] = getCoordinates(feature);
+              // Simple Euclidean distance - sufficient for small distances
+              const distance =
+                Math.sqrt(
+                  Math.pow(clickPoint[0] - lon, 2) +
+                    Math.pow(clickPoint[1] - lat, 2)
+                ) || 0;
+
+              if (distance < minDistance) {
+                minDistance = distance;
+                closestFeature = feature;
+              }
+            });
+
+            // Select the closest image
+            if (closestFeature) {
+              onImageSelect(closestFeature.properties.id);
+            }
+          }
         }
       }
     },
-    [onImageSelect]
+    [onImageSelect, trackGroups]
   );
 
-  // Get all layer IDs for interactive layers
-  const interactiveLayerIds = Object.keys(trackGroups).map(
-    (trackName) => `${trackName}-points`
+  // Get all layer IDs for interactive layers - including clusters and path lines
+  const interactiveLayerIds = Object.keys(trackGroups).flatMap((trackName) => [
+    `${trackName}-points`,
+    `${trackName}-clusters`,
+    `${trackName}-cluster-count`,
+    `${trackName}-path-line`,
+  ]);
+
+  // Find the nearest point to the cursor when hovering on a path
+  const findNearestPointOnPath = useCallback(
+    (cursorPosition, trackName) => {
+      const trackFeatures = trackGroups[trackName]?.features;
+
+      if (!trackFeatures || trackFeatures.length === 0) {
+        return null;
+      }
+
+      // Extract cursor coordinates
+      const [cursorLng, cursorLat] = cursorPosition;
+
+      // Find the closest point in this track
+      let closestFeature = null;
+      let minDistance = Infinity;
+
+      trackFeatures.forEach((feature) => {
+        const [lon, lat] = getCoordinates(feature);
+
+        // Simple Euclidean distance - sufficient for small distances
+        const distance =
+          Math.sqrt(
+            Math.pow(cursorLng - lon, 2) + Math.pow(cursorLat - lat, 2)
+          ) || 0;
+
+        if (distance < minDistance) {
+          minDistance = distance;
+          closestFeature = feature;
+        }
+      });
+
+      // Return coordinates of the closest feature
+      if (closestFeature) {
+        const [lon, lat] = getCoordinates(closestFeature);
+        return {
+          coordinates: [lon, lat],
+          feature: closestFeature,
+        };
+      }
+
+      return null;
+    },
+    [trackGroups]
   );
+
+  // Find nearby points within a certain radius of the cursor when hovering on a path
+  const findNearbyPointsOnPath = useCallback(
+    (cursorPosition, trackName) => {
+      const trackFeatures = trackGroups[trackName]?.features;
+
+      if (!trackFeatures || trackFeatures.length === 0) {
+        return [];
+      }
+
+      // Extract cursor coordinates
+      const [cursorLng, cursorLat] = cursorPosition;
+
+      // Find points within the hover radius
+      const nearby = [];
+
+      trackFeatures.forEach((feature) => {
+        const [lon, lat] = getCoordinates(feature);
+
+        // Simple Euclidean distance - sufficient for small distances
+        const distance =
+          Math.sqrt(
+            Math.pow(cursorLng - lon, 2) + Math.pow(cursorLat - lat, 2)
+          ) || 0;
+
+        // If within radius, add to nearby points
+        if (distance < hoverRadius) {
+          nearby.push({
+            coordinates: [lon, lat],
+            feature: feature,
+            distance: distance,
+          });
+        }
+      });
+
+      // Sort by distance (closest first)
+      nearby.sort((a, b) => a.distance - b.distance);
+
+      // Return all nearby points
+      return nearby;
+    },
+    [trackGroups, hoverRadius]
+  );
+
+  // Handle mouse move over path lines
+  const onMouseMove = useCallback(
+    (event) => {
+      // Only process if we have features and they're from a path line layer
+      if (event.features && event.features.length > 0) {
+        const feature = event.features[0];
+        const featureId = feature.layer.id;
+
+        // Check if we're hovering over a path line
+        if (featureId && featureId.endsWith("-path-line")) {
+          setIsHoveringPath(true);
+
+          // Extract track name from the layer ID
+          const trackName = featureId.replace("-path-line", "");
+
+          // Get cursor position
+          const cursorPosition = [event.lngLat.lng, event.lngLat.lat];
+
+          // Find nearest point for the main hover marker
+          const nearestPoint = findNearestPointOnPath(
+            cursorPosition,
+            trackName
+          );
+
+          if (nearestPoint) {
+            setHoveredPoint(nearestPoint.coordinates);
+          }
+
+          // Find nearby points for additional reddish markers
+          const nearby = findNearbyPointsOnPath(cursorPosition, trackName);
+          setNearbyPoints(nearby);
+        }
+      } else {
+        // When not hovering over any path, clear the hover state after a brief delay
+        // This creates a smoother experience as the marker doesn't disappear immediately
+        // when moving slightly off the path
+        if (isHoveringPath) {
+          setTimeout(() => {
+            if (!isHoveringPath) {
+              setHoveredPoint(null);
+              setNearbyPoints([]);
+            }
+          }, 300);
+          setIsHoveringPath(false);
+        }
+      }
+    },
+    [findNearestPointOnPath, findNearbyPointsOnPath, isHoveringPath]
+  );
+
+  // Clear hovered point when mouse leaves the map
+  const onMouseLeave = useCallback(() => {
+    setHoveredPoint(null);
+    setNearbyPoints([]);
+    setIsHoveringPath(false);
+  }, []);
 
   return (
     <div className='relative rounded-xl overflow-hidden shadow-lg'>
@@ -259,6 +479,8 @@ const MapComponent = ({
         onMove={(evt) => setViewState(evt.viewState)}
         interactiveLayerIds={interactiveLayerIds}
         onClick={onMapClick}
+        onMouseMove={onMouseMove}
+        onMouseLeave={onMouseLeave}
         dragRotate={!isCompact}
         pitchWithRotate={!isCompact}
         attributionControl={false}
@@ -354,54 +576,6 @@ const MapComponent = ({
                 }}
               />
             </Source>
-
-            {/* Then render the track points layer (points on top) */}
-            <Source
-              id={`${trackName}-points-source`}
-              type='geojson'
-              data={getPointsFeatureCollection(trackGroups[trackName].features)}
-            >
-              <Layer
-                id={`${trackName}-points`}
-                type='circle'
-                minzoom={13}
-                paint={{
-                  "circle-radius": getCircleRadius(),
-                  "circle-color": "#ff4545",
-                  "circle-opacity": 0.9,
-                  "circle-stroke-width": 0.8,
-                  "circle-stroke-color": "white",
-                  "circle-stroke-opacity": 0.8,
-                  // Highlight on hover
-                  "circle-opacity-transition": { duration: 200 },
-                  "circle-stroke-opacity-transition": { duration: 200 },
-                }}
-              />
-
-              {/* Highlight effect on hover */}
-              <Layer
-                id={`${trackName}-points-hover`}
-                type='circle'
-                paint={{
-                  "circle-radius": getCircleRadius() + 3,
-                  "circle-color": "#ff4545",
-                  "circle-opacity": [
-                    "case",
-                    ["boolean", ["feature-state", "hover"], false],
-                    0.5,
-                    0,
-                  ],
-                  "circle-stroke-width": 2,
-                  "circle-stroke-color": "white",
-                  "circle-stroke-opacity": [
-                    "case",
-                    ["boolean", ["feature-state", "hover"], false],
-                    0.8,
-                    0,
-                  ],
-                }}
-              />
-            </Source>
           </React.Fragment>
         ))}
 
@@ -426,6 +600,71 @@ const MapComponent = ({
                 />
               );
             })}
+
+        {/* Hover effect - show a marker or highlight for the hovered point */}
+        {hoveredPoint && (
+          <Marker
+            longitude={hoveredPoint[0]}
+            latitude={hoveredPoint[1]}
+            anchor='center'
+            color={darkMode ? "#ff6677" : "#ff1177"}
+            radius={getCircleRadius()}
+            strokeWidth={2}
+            strokeColor={darkMode ? "#000" : "#fff"}
+            style={{ transition: "transform 0.2s" }}
+          >
+            <div
+              style={{
+                width: 16,
+                height: 16,
+                borderRadius: "50%",
+                background: darkMode ? "#ff6677" : "#ff1177",
+                transform: "scale(1.2)",
+              }}
+            />
+          </Marker>
+        )}
+
+        {/* Nearby points rendering - shows available points within hover radius */}
+        {nearbyPoints.map((point, index) => {
+          // Skip the first one if it's the same as the hovered point (to avoid duplicate markers)
+          if (
+            index === 0 &&
+            hoveredPoint &&
+            hoveredPoint[0] === point.coordinates[0] &&
+            hoveredPoint[1] === point.coordinates[1]
+          ) {
+            return null;
+          }
+
+          // Limit the number of nearby points shown
+          if (index > 15) return null;
+
+          return (
+            <Marker
+              key={`nearby-${index}`}
+              longitude={point.coordinates[0]}
+              latitude={point.coordinates[1]}
+              anchor='center'
+            >
+              <div
+                className='nearby-point'
+                style={{
+                  width: 12,
+                  height: 12,
+                  borderRadius: "50%",
+                  background: darkMode ? "#ff3344" : "#ff2244",
+                  border: `2px solid ${darkMode ? "#000000" : "#ffffff"}`,
+                  opacity: 1 - (point.distance / hoverRadius) * 0.7, // Fade based on distance
+                  boxShadow: "0 0 8px rgba(255, 0, 0, 0.6)",
+                  transform: `scale(${
+                    1.2 - (point.distance / hoverRadius) * 0.4
+                  })`, // Scale based on distance
+                }}
+              />
+            </Marker>
+          );
+        })}
       </Map>
 
       {/* Refresh button in the top-left corner */}
@@ -447,6 +686,25 @@ const MapComponent = ({
           </button>
         </div>
       )}
+
+      {/* Hover marker - this will appear when hovering over a path
+      {hoveredPoint && !isCompact && (
+        <div
+          className='absolute z-30 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none'
+          style={{
+            left: "50%",
+            top: "50%",
+            transition: "opacity 0.2s ease-in-out",
+          }}
+        >
+          <div className='flex flex-col items-center'>
+            <div className='glass px-3 py-1.5 rounded-lg shadow-lg mb-2 text-sm border border-blue-400/30'>
+              <span className='text-blue-500 font-medium'>Click to view</span>
+            </div>
+            <div className='w-4 h-4 bg-blue-500 rounded-full animate-pulse shadow-lg shadow-blue-500/50 border-2 border-white'></div>
+          </div>
+        </div>
+      )} */}
 
       {/* Toggle button in the top-right corner - with compact version for mini-map */}
       <div className={`absolute top-3 right-${isCompact ? "3" : "16"} z-10`}>

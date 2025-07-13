@@ -287,3 +287,25 @@ body {
     font-size: 90%;
   }
 }
+
+/* Pulsing animation for nearby points */
+@keyframes nearby-point-pulse {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(255, 51, 68, 0.7);
+  }
+
+  70% {
+    transform: scale(1.1);
+    box-shadow: 0 0 0 10px rgba(255, 51, 68, 0);
+  }
+
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(255, 51, 68, 0);
+  }
+}
+
+.nearby-point {
+  animation: nearby-point-pulse 2s infinite;
+}
