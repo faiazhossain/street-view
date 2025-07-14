@@ -12,6 +12,28 @@ export default function Home() {
   const { imageData, imagePath, isLoading, error, refreshData } =
     useImageData();
 
+  // Helper function to extract track and image numbers from image ID
+  const parseImageId = (id) => {
+    const match = id.match(/^(\d+)_(\d+)/);
+    if (match) {
+      return {
+        trackNumber: parseInt(match[1], 10),
+        imageNumber: parseInt(match[2], 10),
+      };
+    }
+    return { trackNumber: 0, imageNumber: 0 };
+  };
+
+  // Helper function to find image by track and image number
+  const findImageByTrackAndNumber = (trackNumber, imageNumber) => {
+    return imageData.features.find((feature) => {
+      const { trackNumber: t, imageNumber: i } = parseImageId(
+        feature.properties.id
+      );
+      return t === trackNumber && i === imageNumber;
+    });
+  };
+
   const handleImageSelect = useCallback((imageId) => {
     setSelectedImageId(imageId);
     setShowViewer(true);
@@ -22,22 +44,106 @@ export default function Home() {
   }, []);
 
   const handleNextImage = useCallback(() => {
-    const currentIndex = imageData.features.findIndex(
-      (feature) => feature.properties.id === selectedImageId
-    );
+    if (!selectedImageId || imageData.features.length === 0) return;
 
-    if (currentIndex < imageData.features.length - 1) {
-      setSelectedImageId(imageData.features[currentIndex + 1].properties.id);
+    // Parse current image's track and image numbers
+    const { trackNumber, imageNumber } = parseImageId(selectedImageId);
+
+    // Try to find the next sequential image number in the same track
+    let nextImage = findImageByTrackAndNumber(trackNumber, imageNumber + 1);
+
+    // If no next image in current track, try to find the first image in the next track
+    if (!nextImage) {
+      // Find all tracks and sort them
+      const tracks = Array.from(
+        new Set(
+          imageData.features.map(
+            (feature) => parseImageId(feature.properties.id).trackNumber
+          )
+        )
+      ).sort((a, b) => a - b);
+
+      const currentTrackIndex = tracks.indexOf(trackNumber);
+
+      // If there's a next track
+      if (currentTrackIndex < tracks.length - 1) {
+        const nextTrackNumber = tracks[currentTrackIndex + 1];
+
+        // Find all images in the next track
+        const nextTrackImages = imageData.features.filter((feature) => {
+          const { trackNumber: t } = parseImageId(feature.properties.id);
+          return t === nextTrackNumber;
+        });
+
+        // Sort by image number
+        nextTrackImages.sort((a, b) => {
+          const imgA = parseImageId(a.properties.id).imageNumber;
+          const imgB = parseImageId(b.properties.id).imageNumber;
+          return imgA - imgB;
+        });
+
+        // Get the first image in the next track
+        if (nextTrackImages.length > 0) {
+          nextImage = nextTrackImages[0];
+        }
+      }
+    }
+
+    // Update selected image if we found a next one
+    if (nextImage) {
+      setSelectedImageId(nextImage.properties.id);
     }
   }, [selectedImageId, imageData.features]);
 
   const handlePrevImage = useCallback(() => {
-    const currentIndex = imageData.features.findIndex(
-      (feature) => feature.properties.id === selectedImageId
-    );
+    if (!selectedImageId || imageData.features.length === 0) return;
 
-    if (currentIndex > 0) {
-      setSelectedImageId(imageData.features[currentIndex - 1].properties.id);
+    // Parse current image's track and image numbers
+    const { trackNumber, imageNumber } = parseImageId(selectedImageId);
+
+    // Try to find the previous sequential image number in the same track
+    let prevImage = findImageByTrackAndNumber(trackNumber, imageNumber - 1);
+
+    // If no previous image in current track, try to find the last image in the previous track
+    if (!prevImage) {
+      // Find all tracks and sort them
+      const tracks = Array.from(
+        new Set(
+          imageData.features.map(
+            (feature) => parseImageId(feature.properties.id).trackNumber
+          )
+        )
+      ).sort((a, b) => a - b);
+
+      const currentTrackIndex = tracks.indexOf(trackNumber);
+
+      // If there's a previous track
+      if (currentTrackIndex > 0) {
+        const prevTrackNumber = tracks[currentTrackIndex - 1];
+
+        // Find all images in the previous track
+        const prevTrackImages = imageData.features.filter((feature) => {
+          const { trackNumber: t } = parseImageId(feature.properties.id);
+          return t === prevTrackNumber;
+        });
+
+        // Sort by image number (descending to get highest/last)
+        prevTrackImages.sort((a, b) => {
+          const imgA = parseImageId(a.properties.id).imageNumber;
+          const imgB = parseImageId(b.properties.id).imageNumber;
+          return imgB - imgA; // Note: descending order
+        });
+
+        // Get the last image in the previous track
+        if (prevTrackImages.length > 0) {
+          prevImage = prevTrackImages[0];
+        }
+      }
+    }
+
+    // Update selected image if we found a previous one
+    if (prevImage) {
+      setSelectedImageId(prevImage.properties.id);
     }
   }, [selectedImageId, imageData.features]);
 

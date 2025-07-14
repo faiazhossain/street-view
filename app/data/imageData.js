@@ -25,7 +25,8 @@ export function useImageData() {
 
       // Add timestamp to URL to bypass any potential caching
       const timestamp = Date.now();
-      const response = await fetch(`/api/features?_t=${timestamp}`);
+      // Use the new merge-all endpoint to get GeoJSON data in the optimized format
+      const response = await fetch(`/api/features/merge-all?_t=${timestamp}`);
 
       if (!response.ok) {
         throw new Error(`API responded with status: ${response.status}`);
@@ -44,18 +45,39 @@ export function useImageData() {
 
       // Generate path data from the features for map display
       if (result.features && result.features.length > 0) {
-        const pathCoordinates = result.features.map(
-          (feature) => feature.geometry.coordinates
-        );
+        // Group features by track for better path organization
+        const trackGroups = {};
 
+        result.features.forEach((feature) => {
+          // Extract track identifier from the ID (format "XX_YY" where XX is track)
+          const id = feature.properties.id;
+          const trackMatch = id.match(/^(\d+)_/);
+          const trackId = trackMatch ? trackMatch[1] : "default";
+
+          if (!trackGroups[trackId]) {
+            trackGroups[trackId] = [];
+          }
+
+          // Use snapped coordinates if available, otherwise use original
+          const coordinates = feature.properties.longitude_snapped
+            ? [
+                feature.properties.longitude_snapped,
+                feature.properties.latitude_snapped,
+              ]
+            : feature.geometry.coordinates;
+
+          trackGroups[trackId].push(coordinates);
+        });
+
+        // Create a MultiLineString with separate path for each track
         const pathData = {
           type: "Feature",
           geometry: {
-            type: "LineString",
-            coordinates: pathCoordinates,
+            type: "MultiLineString",
+            coordinates: Object.values(trackGroups),
           },
           properties: {
-            name: "Street View Path",
+            name: "Street View Paths",
           },
         };
 

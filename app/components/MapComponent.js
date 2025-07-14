@@ -13,6 +13,11 @@ import SelectedMarker from "./map/SelectedMarker";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useTheme } from "../context/ThemeContext";
 import { IoRefreshOutline } from "react-icons/io5";
+import {
+  loadGeoJsonFromLocal,
+  saveGeoJsonToLocal,
+  isGeoJsonStale,
+} from "../utils/localStorageUtils";
 
 const MapComponent = ({
   imageData,
@@ -23,20 +28,178 @@ const MapComponent = ({
   customMapStyle = null,
   refreshData,
   isLoading,
+  initialViewState = null, // Add initialViewState prop with default value of null
 }) => {
   const { darkMode } = useTheme();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [hoveredPoint, setHoveredPoint] = useState(null);
   const [isHoveringPath, setIsHoveringPath] = useState(false);
-  const [nearbyPoints, setNearbyPoints] = useState([]); // New state for nearby points
+  const [nearbyPoints, setNearbyPoints] = useState([]); // State for nearby points
   const [hoverRadius, setHoverRadius] = useState(0.001); // Configurable hover radius (in degrees)
+  const [geoJsonData, setGeoJsonData] = useState(null); // State for the GeoJSON data from API
+
+  // State for coordinate type toggle (snapped vs original)
+  const [useSnappedCoordinates, setUseSnappedCoordinates] = useState(true);
+
+  // Instead of hover points, we'll create a GeoJSON layer for all points
+  const [pointsGeoJSON, setPointsGeoJSON] = useState({
+    type: "FeatureCollection",
+    features: [],
+  });
+
+  // Function to toggle between coordinate types
+  const toggleCoordinateType = () => {
+    setUseSnappedCoordinates((prev) => !prev);
+  };
+
+  // Fetch GeoJSON data from API when component mounts or refreshData is called
+  useEffect(() => {
+    const fetchGeoJsonData = async (forceRefresh = false) => {
+      try {
+        setIsRefreshing(true);
+
+        // If we're not forcing a refresh, try to get data from local storage first
+        if (!forceRefresh) {
+          const localData = loadGeoJsonFromLocal();
+          if (localData && !isGeoJsonStale()) {
+            console.log("Using cached GeoJSON data from local storage");
+            setGeoJsonData(localData);
+            setIsRefreshing(false);
+            return;
+          }
+        }
+
+        // Add timestamp to prevent caching issues
+        const timestamp = new Date().getTime();
+        // Add refresh parameter if we're forcing refresh
+        const apiUrl = `/api/features/merge-all?_t=${timestamp}${
+          forceRefresh ? "&refresh=true" : ""
+        }`;
+
+        console.log("Fetching GeoJSON data from API");
+        const response = await fetch(apiUrl, {
+          cache: "no-store",
+          // Set longer timeout as we're handling fallbacks properly now
+          signal: AbortSignal.timeout(15000), // 15 seconds timeout
+        });
+
+        if (!response.ok) {
+          // If status is 504 (Gateway Timeout), throw a specific error
+          if (response.status === 504) {
+            throw new Error(
+              "API Gateway Timeout (504). Using cached data instead."
+            );
+          }
+          throw new Error(`Network response error: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (data.error) {
+          console.warn("API returned error:", data.error, data.message);
+          throw new Error(data.message || "Error in API response");
+        }
+
+        // Save data to local storage
+        saveGeoJsonToLocal(data);
+        console.log("Saved GeoJSON data to local storage");
+
+        setGeoJsonData(data);
+      } catch (error) {
+        console.error("Error fetching GeoJSON data:", error);
+
+        // If API fetch failed, try local storage as a fallback
+        const localData = loadGeoJsonFromLocal();
+        if (localData) {
+          console.log("API fetch failed. Using local storage as fallback.");
+          setGeoJsonData(localData);
+
+          // Show non-blocking notification
+          if (!forceRefresh) {
+            // Only show alert if user explicitly requested a refresh
+            if (forceRefresh) {
+              alert(
+                `Could not refresh data: ${error.message}\nUsing cached data instead.`
+              );
+            }
+          }
+        } else {
+          // Critical error - no data available
+          alert(
+            `Failed to load map data: ${error.message}\nPlease check your connection and try again.`
+          );
+        }
+      } finally {
+        setIsRefreshing(false);
+      }
+    };
+
+    fetchGeoJsonData();
+
+    // Make the fetchGeoJsonData function available to the component
+    window.fetchGeoJsonData = fetchGeoJsonData;
+  }, [refreshData]);
+
+  // Use the GeoJSON data if available, otherwise fall back to the imageData prop
+  const displayData = geoJsonData || imageData;
+
+  // Populate pointsGeoJSON whenever the display data changes
+  useEffect(() => {
+    if (displayData?.features && displayData.features.length > 0) {
+      // Create a proper GeoJSON structure for all points
+      const features = displayData.features.map((feature) => {
+        const [lon, lat] = getCoordinates(feature);
+        return {
+          type: "Feature",
+          properties: {
+            ...feature.properties,
+            id: feature.properties.id,
+          },
+          geometry: {
+            type: "Point",
+            coordinates: [lon, lat],
+          },
+        };
+      });
+
+      setPointsGeoJSON({
+        type: "FeatureCollection",
+        features,
+      });
+    }
+  }, [displayData, useSnappedCoordinates]);
 
   // Handle refresh click
   const handleRefresh = () => {
+    // Prevent starting a new refresh if already refreshing
+    if (isRefreshing) return;
+
     setIsRefreshing(true);
-    refreshData();
-    // Add a small timeout to show the spinning animation
-    setTimeout(() => setIsRefreshing(false), 1000);
+
+    if (refreshData) {
+      // If using parent component's refresh function
+      const refreshPromise = refreshData();
+
+      // Handle both Promise and non-Promise return values
+      if (refreshPromise && typeof refreshPromise.then === "function") {
+        refreshPromise
+          .catch((err) => console.error("Error during refresh:", err))
+          .finally(() => setIsRefreshing(false));
+      } else {
+        // If refreshData doesn't return a promise, use a timeout to prevent UI locking
+        setTimeout(() => setIsRefreshing(false), 2000);
+      }
+    } else {
+      // Force refresh from API with window.fetchGeoJsonData
+      // The fetchGeoJsonData function will handle setting isRefreshing to false in its finally block
+      if (window.fetchGeoJsonData) {
+        window.fetchGeoJsonData(true);
+      } else {
+        // Fallback in case fetchGeoJsonData isn't available
+        console.error("fetchGeoJsonData function not available");
+        setIsRefreshing(false);
+      }
+    }
   };
 
   // Dynamically set map style based on theme
@@ -46,177 +209,57 @@ const MapComponent = ({
       ? "https://map.barikoi.com/styles/barikoi-dark-mode/style.json?key=NDE2NzpVNzkyTE5UMUoy"
       : "https://map.barikoi.com/styles/barikoi-light/style.json?key=NDE2NzpVNzkyTE5UMUoy");
 
-  const [viewState, setViewState] = useState({
-    longitude: imageData.features[0]?.geometry.coordinates[0] || 0,
-    latitude: imageData.features[0]?.geometry.coordinates[1] || 0,
-    zoom: 14,
-    pitch: 0,
-    bearing: 0,
-  });
+  // Initialize view state from initialViewState (if provided) or from the first feature in the data
+  const [viewState, setViewState] = useState(
+    initialViewState || {
+      longitude: displayData?.features?.[0]?.geometry.coordinates[0] || 0,
+      latitude: displayData?.features?.[0]?.geometry.coordinates[1] || 0,
+      zoom: 14,
+      pitch: 0,
+      bearing: 0,
+    }
+  );
+
+  // Update the view state when the GeoJSON data changes
+  useEffect(() => {
+    if (displayData?.features && displayData.features.length > 0) {
+      setViewState((prev) => ({
+        ...prev,
+        longitude:
+          displayData.features[0]?.geometry.coordinates[0] || prev.longitude,
+        latitude:
+          displayData.features[0]?.geometry.coordinates[1] || prev.latitude,
+      }));
+    }
+  }, [displayData]);
 
   // State to store track groups
   const [trackGroups, setTrackGroups] = useState({});
-
-  // State for coordinate type toggle (snapped vs original)
-  const [useSnappedCoordinates, setUseSnappedCoordinates] = useState(true);
-
-  // Function to toggle between coordinate types
-  const toggleCoordinateType = () => {
-    setUseSnappedCoordinates((prev) => !prev);
-  };
-
-  // Effect to update map view when selected image changes
-  useEffect(() => {
-    if (
-      selectedImageId &&
-      imageData.features &&
-      imageData.features.length > 0
-    ) {
-      const selectedFeature = imageData.features.find(
-        (feature) => feature.properties.id === selectedImageId
-      );
-
-      if (selectedFeature) {
-        const [lon, lat] = getCoordinates(selectedFeature);
-
-        // Update the map view to center on the selected image
-        setViewState((prev) => ({
-          ...prev,
-          longitude: lon,
-          latitude: lat,
-          // We maintain the current zoom level or set it to a reasonable level if needed
-          zoom: prev.zoom < 13 ? 15 : prev.zoom,
-          // Optional: animate transition with a slight duration
-          transitionDuration: 500,
-          padding: [50, 50, 50, 50], // Add padding around the view
-        }));
-      }
-    }
-  }, [selectedImageId, imageData.features, useSnappedCoordinates]);
-
-  // Calculate circle radius based on zoom level
-  const getCircleRadius = () => {
-    // Base radius at zoom level 14
-    const baseRadius = 2.5;
-
-    // More pronounced zoom scaling
-    const zoomFactor = Math.pow(1.8, viewState.zoom - 14);
-
-    // Limit the minimum and maximum size
-    return Math.max(2, Math.min(baseRadius * zoomFactor, 14));
-  };
-
-  // Helper function to get coordinates based on toggle state
-  const getCoordinates = (feature) => {
-    if (useSnappedCoordinates) {
-      // Use snapped coordinates when the toggle is for snapped
-      const lon =
-        feature.properties.longitude_snapped || feature.geometry.coordinates[0];
-      const lat =
-        feature.properties.latitude_snapped || feature.geometry.coordinates[1];
-      return [lon, lat];
-    } else {
-      // Use original coordinates when toggle is for original
-      const lon =
-        feature.properties.longitude_original ||
-        feature.geometry.coordinates[0];
-      const lat =
-        feature.properties.latitude_original || feature.geometry.coordinates[1];
-      return [lon, lat];
-    }
-  };
-
-  // Group images by their track ID
-  useEffect(() => {
-    if (!imageData.features || imageData.features.length === 0) return;
-
-    const groups = {};
-
-    // Process each image
-    imageData.features.forEach((feature) => {
-      const id = feature.properties.id;
-
-      // Determine track name:
-      // 1. For format like "img_track0_265" - extract "track0"
-      // 2. For format like "0_1" - convert to "track0"
-      // 3. Fallback to default
-      let trackName;
-
-      // Extract track name using regex (e.g., "track0" from "img_track0_265")
-      const trackMatch = id?.match(/img_([^_]+)/);
-
-      // New format handling for IDs like "0_1" - extract the first part as track
-      const newFormatMatch = id?.match(/^(\d+)_\d+$/);
-
-      if (trackMatch) {
-        trackName = trackMatch[1]; // This will be "track0", "track1", etc.
-      } else if (newFormatMatch) {
-        trackName = "track" + newFormatMatch[1]; // Convert "0_1" to "track0"
-      } else {
-        trackName = "default"; // Fallback name
-      }
-
-      // Initialize track group if first time seeing this track
-      if (!groups[trackName]) {
-        groups[trackName] = {
-          features: [],
-          color: getTrackColor(trackName), // Get a unique color for each track
-          path: {
-            type: "Feature",
-            properties: {},
-            geometry: {
-              type: "LineString",
-              coordinates: [],
-            },
-          },
-        };
-      }
-
-      // Add feature to track group
-      groups[trackName].features.push(feature);
-    });
-
-    // Create path LineString for each track
-    Object.keys(groups).forEach((trackName) => {
-      // Sort features by ID if needed for proper path order
-      const sortedFeatures = [...groups[trackName].features].sort((a, b) => {
-        let numA, numB;
-        const id_a = a.properties.id;
-        const id_b = b.properties.id;
-
-        if (id_a?.includes("_")) {
-          // Handle both formats: img_track0_265 or 0_1
-          numA = parseInt(
-            id_a.match(/_(\d+)$/)?.[1] || id_a.split("_")[1] || 0
-          );
-        } else {
-          numA = parseInt(id_a?.replace(/\D/g, "") || 0);
-        }
-
-        if (id_b?.includes("_")) {
-          numB = parseInt(
-            id_b.match(/_(\d+)$/)?.[1] || id_b.split("_")[1] || 0
-          );
-        } else {
-          numB = parseInt(id_b?.replace(/\D/g, "") || 0);
-        }
-
-        return numA - numB;
-      });
-
-      // Create path coordinates from sorted features
-      groups[trackName].path.geometry.coordinates = sortedFeatures.map(
-        (feature) => getCoordinates(feature)
-      );
-    });
-
-    setTrackGroups(groups);
-  }, [imageData, useSnappedCoordinates]); // Added useSnappedCoordinates as dependency
 
   // Generate different colors for different tracks
   const getTrackColor = () => {
     // Return a beautiful blue gradient color
     return "rgba(0, 128, 255, 0.8)";
+  };
+
+  // Helper function to get coordinates based on toggle state
+  const getCoordinates = (feature) => {
+    if (!feature?.properties) return [0, 0];
+
+    // Use snapped coordinates if available and toggle is on
+    if (
+      useSnappedCoordinates &&
+      feature.properties.longitude_snapped !== undefined &&
+      feature.properties.latitude_snapped !== undefined
+    ) {
+      return [
+        feature.properties.longitude_snapped,
+        feature.properties.latitude_snapped,
+      ];
+    }
+
+    // Fall back to original coordinates
+    return feature.geometry.coordinates;
   };
 
   // Create feature collection with appropriate coordinates based on toggle
@@ -244,6 +287,70 @@ const MapComponent = ({
         const feature = features[0];
         const featureId = feature.layer.id;
         const featureProps = feature.properties;
+
+        // Check if user clicked on all-points layer
+        if (featureId === "all-points") {
+          if (feature.properties && feature.properties.id) {
+            console.log("Selected point:", feature.properties.id);
+
+            // Update viewport to center on clicked point
+            const [lng, lat] = feature.geometry.coordinates;
+            setViewState((prev) => ({
+              ...prev,
+              longitude: lng,
+              latitude: lat,
+              // Keep current zoom level
+              transitionDuration: 500, // smooth animation in ms
+            }));
+
+            onImageSelect(feature.properties.id);
+          }
+          return;
+        }
+
+        // Check if user clicked on all-points-line layer (when zoomed out)
+        if (featureId === "all-points-line") {
+          const clickPoint = [event.lngLat.lng, event.lngLat.lat];
+
+          // Find the closest point in the pointsGeoJSON
+          let closestFeature = null;
+          let minDistance = Infinity;
+
+          pointsGeoJSON.features.forEach((pointFeature) => {
+            const pointCoords = pointFeature.geometry.coordinates;
+            // Calculate distance between click and point
+            const distance =
+              Math.sqrt(
+                Math.pow(clickPoint[0] - pointCoords[0], 2) +
+                  Math.pow(clickPoint[1] - pointCoords[1], 2)
+              ) || 0;
+
+            if (distance < minDistance) {
+              minDistance = distance;
+              closestFeature = pointFeature;
+            }
+          });
+
+          if (closestFeature && closestFeature.properties.id) {
+            console.log(
+              "Selected nearest point from line:",
+              closestFeature.properties.id
+            );
+
+            // Update viewport to center on closest point
+            const [lng, lat] = closestFeature.geometry.coordinates;
+            setViewState((prev) => ({
+              ...prev,
+              longitude: lng,
+              latitude: lat,
+              // Keep current zoom level
+              transitionDuration: 500, // smooth animation in ms
+            }));
+
+            onImageSelect(closestFeature.properties.id);
+          }
+          return;
+        }
 
         // Check if the user clicked on a cluster
         if (
@@ -276,6 +383,15 @@ const MapComponent = ({
           feature.properties &&
           feature.properties.id
         ) {
+          // Update viewport to center on clicked point
+          const [lng, lat] = feature.geometry.coordinates;
+          setViewState((prev) => ({
+            ...prev,
+            longitude: lng,
+            latitude: lat,
+            transitionDuration: 500, // smooth animation in ms
+          }));
+
           onImageSelect(feature.properties.id);
         }
         // Handle clicks on path lines
@@ -308,167 +424,34 @@ const MapComponent = ({
 
             // Select the closest image
             if (closestFeature) {
+              // Update viewport to center on closest feature
+              const [lon, lat] = getCoordinates(closestFeature);
+              setViewState((prev) => ({
+                ...prev,
+                longitude: lon,
+                latitude: lat,
+                transitionDuration: 500, // smooth animation in ms
+              }));
+
               onImageSelect(closestFeature.properties.id);
             }
           }
         }
       }
     },
-    [onImageSelect, trackGroups]
+    [onImageSelect, trackGroups, pointsGeoJSON]
   );
 
   // Get all layer IDs for interactive layers - including clusters and path lines
-  const interactiveLayerIds = Object.keys(trackGroups).flatMap((trackName) => [
-    `${trackName}-points`,
-    `${trackName}-clusters`,
-    `${trackName}-cluster-count`,
-    `${trackName}-path-line`,
-  ]);
-
-  // Find the nearest point to the cursor when hovering on a path
-  const findNearestPointOnPath = useCallback(
-    (cursorPosition, trackName) => {
-      const trackFeatures = trackGroups[trackName]?.features;
-
-      if (!trackFeatures || trackFeatures.length === 0) {
-        return null;
-      }
-
-      // Extract cursor coordinates
-      const [cursorLng, cursorLat] = cursorPosition;
-
-      // Find the closest point in this track
-      let closestFeature = null;
-      let minDistance = Infinity;
-
-      trackFeatures.forEach((feature) => {
-        const [lon, lat] = getCoordinates(feature);
-
-        // Simple Euclidean distance - sufficient for small distances
-        const distance =
-          Math.sqrt(
-            Math.pow(cursorLng - lon, 2) + Math.pow(cursorLat - lat, 2)
-          ) || 0;
-
-        if (distance < minDistance) {
-          minDistance = distance;
-          closestFeature = feature;
-        }
-      });
-
-      // Return coordinates of the closest feature
-      if (closestFeature) {
-        const [lon, lat] = getCoordinates(closestFeature);
-        return {
-          coordinates: [lon, lat],
-          feature: closestFeature,
-        };
-      }
-
-      return null;
-    },
-    [trackGroups]
-  );
-
-  // Find nearby points within a certain radius of the cursor when hovering on a path
-  const findNearbyPointsOnPath = useCallback(
-    (cursorPosition, trackName) => {
-      const trackFeatures = trackGroups[trackName]?.features;
-
-      if (!trackFeatures || trackFeatures.length === 0) {
-        return [];
-      }
-
-      // Extract cursor coordinates
-      const [cursorLng, cursorLat] = cursorPosition;
-
-      // Find points within the hover radius
-      const nearby = [];
-
-      trackFeatures.forEach((feature) => {
-        const [lon, lat] = getCoordinates(feature);
-
-        // Simple Euclidean distance - sufficient for small distances
-        const distance =
-          Math.sqrt(
-            Math.pow(cursorLng - lon, 2) + Math.pow(cursorLat - lat, 2)
-          ) || 0;
-
-        // If within radius, add to nearby points
-        if (distance < hoverRadius) {
-          nearby.push({
-            coordinates: [lon, lat],
-            feature: feature,
-            distance: distance,
-          });
-        }
-      });
-
-      // Sort by distance (closest first)
-      nearby.sort((a, b) => a.distance - b.distance);
-
-      // Return all nearby points
-      return nearby;
-    },
-    [trackGroups, hoverRadius]
-  );
-
-  // Handle mouse move over path lines
-  const onMouseMove = useCallback(
-    (event) => {
-      // Only process if we have features and they're from a path line layer
-      if (event.features && event.features.length > 0) {
-        const feature = event.features[0];
-        const featureId = feature.layer.id;
-
-        // Check if we're hovering over a path line
-        if (featureId && featureId.endsWith("-path-line")) {
-          setIsHoveringPath(true);
-
-          // Extract track name from the layer ID
-          const trackName = featureId.replace("-path-line", "");
-
-          // Get cursor position
-          const cursorPosition = [event.lngLat.lng, event.lngLat.lat];
-
-          // Find nearest point for the main hover marker
-          const nearestPoint = findNearestPointOnPath(
-            cursorPosition,
-            trackName
-          );
-
-          if (nearestPoint) {
-            setHoveredPoint(nearestPoint.coordinates);
-          }
-
-          // Find nearby points for additional reddish markers
-          const nearby = findNearbyPointsOnPath(cursorPosition, trackName);
-          setNearbyPoints(nearby);
-        }
-      } else {
-        // When not hovering over any path, clear the hover state after a brief delay
-        // This creates a smoother experience as the marker doesn't disappear immediately
-        // when moving slightly off the path
-        if (isHoveringPath) {
-          setTimeout(() => {
-            if (!isHoveringPath) {
-              setHoveredPoint(null);
-              setNearbyPoints([]);
-            }
-          }, 300);
-          setIsHoveringPath(false);
-        }
-      }
-    },
-    [findNearestPointOnPath, findNearbyPointsOnPath, isHoveringPath]
-  );
-
-  // Clear hovered point when mouse leaves the map
-  const onMouseLeave = useCallback(() => {
-    setHoveredPoint(null);
-    setNearbyPoints([]);
-    setIsHoveringPath(false);
-  }, []);
+  const interactiveLayerIds = [
+    "all-points", // Add the all-points layer as interactive
+    ...Object.keys(trackGroups).flatMap((trackName) => [
+      `${trackName}-points`,
+      `${trackName}-clusters`,
+      `${trackName}-cluster-count`,
+      `${trackName}-path-line`,
+    ]),
+  ];
 
   return (
     <div className='relative rounded-xl overflow-hidden shadow-lg'>
@@ -479,8 +462,6 @@ const MapComponent = ({
         onMove={(evt) => setViewState(evt.viewState)}
         interactiveLayerIds={interactiveLayerIds}
         onClick={onMapClick}
-        onMouseMove={onMouseMove}
-        onMouseLeave={onMouseLeave}
         dragRotate={!isCompact}
         pitchWithRotate={!isCompact}
         attributionControl={false}
@@ -601,70 +582,32 @@ const MapComponent = ({
               );
             })}
 
-        {/* Hover effect - show a marker or highlight for the hovered point */}
-        {hoveredPoint && (
-          <Marker
-            longitude={hoveredPoint[0]}
-            latitude={hoveredPoint[1]}
-            anchor='center'
-            color={darkMode ? "#ff6677" : "#ff1177"}
-            radius={getCircleRadius()}
-            strokeWidth={2}
-            strokeColor={darkMode ? "#000" : "#fff"}
-            style={{ transition: "transform 0.2s" }}
-          >
-            <div
-              style={{
-                width: 16,
-                height: 16,
-                borderRadius: "50%",
-                background: darkMode ? "#ff6677" : "#ff1177",
-                transform: "scale(1.2)",
-              }}
-            />
-          </Marker>
-        )}
-
-        {/* Nearby points rendering - shows available points within hover radius */}
-        {nearbyPoints.map((point, index) => {
-          // Skip the first one if it's the same as the hovered point (to avoid duplicate markers)
-          if (
-            index === 0 &&
-            hoveredPoint &&
-            hoveredPoint[0] === point.coordinates[0] &&
-            hoveredPoint[1] === point.coordinates[1]
-          ) {
-            return null;
-          }
-
-          // Limit the number of nearby points shown
-          if (index > 15) return null;
-
-          return (
-            <Marker
-              key={`nearby-${index}`}
-              longitude={point.coordinates[0]}
-              latitude={point.coordinates[1]}
-              anchor='center'
-            >
-              <div
-                className='nearby-point'
-                style={{
-                  width: 12,
-                  height: 12,
-                  borderRadius: "50%",
-                  background: darkMode ? "#ff3344" : "#ff2244",
-                  border: `2px solid ${darkMode ? "#000000" : "#ffffff"}`,
-                  opacity: 1 - (point.distance / hoverRadius) * 0.7, // Fade based on distance
-                  boxShadow: "0 0 8px rgba(255, 0, 0, 0.6)",
-                  transform: `scale(${
-                    1.2 - (point.distance / hoverRadius) * 0.4
-                  })`, // Scale based on distance
-                }}
-              />
-            </Marker>
-          );
-        })}
+        {/* All Points - GeoJSON layer for performance */}
+        <Source id='all-points-source' type='geojson' data={pointsGeoJSON}>
+          <Layer
+            id='all-points'
+            type='circle'
+            paint={{
+              "circle-radius": [
+                "interpolate",
+                ["linear"],
+                ["zoom"],
+                10,
+                3,
+                14,
+                5,
+                18,
+                8,
+              ],
+              "circle-color": darkMode ? "#ff6677" : "#ff1177",
+              "circle-stroke-width": 0.2,
+              "circle-stroke-color": darkMode ? "#ffffff" : "#ffffff",
+              "circle-opacity": 0.8,
+              // Add circle pitch alignment for 3D effect
+              "circle-pitch-alignment": "map",
+            }}
+          />
+        </Source>
       </Map>
 
       {/* Refresh button in the top-left corner */}
@@ -686,25 +629,6 @@ const MapComponent = ({
           </button>
         </div>
       )}
-
-      {/* Hover marker - this will appear when hovering over a path
-      {hoveredPoint && !isCompact && (
-        <div
-          className='absolute z-30 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none'
-          style={{
-            left: "50%",
-            top: "50%",
-            transition: "opacity 0.2s ease-in-out",
-          }}
-        >
-          <div className='flex flex-col items-center'>
-            <div className='glass px-3 py-1.5 rounded-lg shadow-lg mb-2 text-sm border border-blue-400/30'>
-              <span className='text-blue-500 font-medium'>Click to view</span>
-            </div>
-            <div className='w-4 h-4 bg-blue-500 rounded-full animate-pulse shadow-lg shadow-blue-500/50 border-2 border-white'></div>
-          </div>
-        </div>
-      )} */}
 
       {/* Toggle button in the top-right corner - with compact version for mini-map */}
       <div className={`absolute top-3 right-${isCompact ? "3" : "16"} z-10`}>

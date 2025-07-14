@@ -24,6 +24,12 @@ const ImageViewer = ({
 }) => {
   const [isAutoPlaying, setIsAutoPlaying] = useState(false);
   const [showMiniMap, setShowMiniMap] = useState(true); // Default to shown
+  // Add state to track the minimap center position
+  const [miniMapViewState, setMiniMapViewState] = useState({
+    longitude: selectedImage?.geometry?.coordinates[0] || 0,
+    latitude: selectedImage?.geometry?.coordinates[1] || 0,
+    zoom: 14,
+  });
   const timerRef = useRef(null);
   const [fadeIn, setFadeIn] = useState(true); // For transition animations
   const showControls = useSelector(selectShowControls); // Get UI controls visibility state from Redux
@@ -100,6 +106,32 @@ const ImageViewer = ({
 
     return () => clearTimeout(timer);
   }, [selectedImage?.properties?.id]);
+
+  // Update minimap position when selected image changes
+  useEffect(() => {
+    if (selectedImage) {
+      // Get coordinates from selected image
+      const useSnapped =
+        selectedImage.properties.longitude_snapped !== undefined &&
+        selectedImage.properties.latitude_snapped !== undefined;
+
+      const longitude = useSnapped
+        ? selectedImage.properties.longitude_snapped
+        : selectedImage.geometry.coordinates[0];
+
+      const latitude = useSnapped
+        ? selectedImage.properties.latitude_snapped
+        : selectedImage.geometry.coordinates[1];
+
+      // Update the minimap view state to center on the selected image
+      setMiniMapViewState({
+        longitude,
+        latitude,
+        zoom: 15, // A good zoom level for the minimap
+        transitionDuration: 500, // Smooth animation
+      });
+    }
+  }, [selectedImage]);
 
   // Use keyboard navigation hook
   useKeyboardNavigation({
@@ -185,6 +217,7 @@ const ImageViewer = ({
                 selectedImageId={selectedImage.properties.id}
                 onImageSelect={onImageSelect}
                 isCompact={true}
+                initialViewState={miniMapViewState} // Pass our custom view state to center on selected point
               />
               <button
                 onClick={toggleMiniMap}

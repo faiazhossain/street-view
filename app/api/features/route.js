@@ -1,85 +1,62 @@
-// Simplified API route to fetch and format image data
-// No proxy needed - direct image URLs from server
+// API route to handle GeoJSON feature data
+// Direct image URLs from server, no proxy needed
 
-export async function GET() {
+export const dynamic = "force-dynamic";
+
+/**
+ * API handler for fetching image features
+ * @param {Request} request - The incoming request object
+ * @returns {Response} - JSON response with image features
+ */
+export async function GET(request) {
   try {
-    // Make the request to your API server
-    const response = await fetch("http://202.72.236.166:8001/api/features", {
-      headers: {
-        "Content-Type": "application/json",
-      },
-      // Add cache: 'no-store' to prevent reusing previous response
-      cache: "no-store",
-    });
+    // Get the URL parameters if any
+    const url = new URL(request.url);
+    const trackParam = url.searchParams.get("track");
 
-    if (!response.ok) {
-      throw new Error(`API responded with status: ${response.status}`);
-    }
-
-    // Get the response data
-    const rawData = await response.json();
-
-    // Validate data format
-    if (!rawData || !rawData.data || !Array.isArray(rawData.data)) {
-      throw new Error("Invalid API response format");
-    }
-
-    // Format data for the map component (GeoJSON format)
-    const formattedData = {
-      type: "FeatureCollection",
-      features: rawData.data.map((item) => ({
-        type: "Feature",
-        properties: {
-          id: item.feature_id || item.id,
-          // Use direct image URLs from server
-          imageUrl: item.image_url_comp,
-          imageUrl_High: item.image_url_high,
-          imageUrl_Comp: item.image_url_comp,
-          initialYaw: item.initial_yaw || 0,
-          initialPitch: item.initial_pitch || 0,
-          initialHfov: item.initial_hfov || 100,
-          showCompass: item.show_compass !== false,
-          // Coordinate data
-          longitude_original: parseFloat(item.longitude_original || 0),
-          latitude_original: parseFloat(item.latitude_original || 0),
-          longitude_snapped: parseFloat(item.longitude_snapped || 0),
-          latitude_snapped: parseFloat(item.latitude_snapped || 0),
-          created_at: item.created_at,
-        },
-        geometry: {
-          type: "Point",
-          // Use snapped coordinates for map display
-          coordinates: [
-            parseFloat(item.longitude_snapped || item.longitude_original || 0),
-            parseFloat(item.latitude_snapped || item.latitude_original || 0),
-          ],
-        },
-      })),
-    };
-
-    // Return the formatted response
-    return new Response(JSON.stringify(formattedData), {
-      status: 200,
-      headers: {
-        "Content-Type": "application/json",
-        // Disable caching to ensure fresh data
-        "Cache-Control": "no-store, max-age=0, must-revalidate",
-      },
-    });
-  } catch (error) {
-    console.error("API Error:", error);
-
-    return new Response(
-      JSON.stringify({
-        status: "error",
-        message: error.message,
-      }),
+    // Fetch merged data from the source API
+    const response = await fetch(
+      "http://202.72.236.166:8001/api/features/merge-all",
       {
-        status: 500,
         headers: {
           "Content-Type": "application/json",
         },
+        // Add cache: 'no-store' to prevent reusing previous response
+        cache: "no-store",
       }
+    );
+
+    if (!response.ok) {
+      throw new Error(`API response error: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    // If track parameter is specified, filter features by track
+    if (trackParam) {
+      // Filter features based on track ID pattern
+      const filteredFeatures = data.features.filter((feature) => {
+        const id = feature.properties.id;
+        // Handle different ID formats
+        // Format like "track17/17_2" or just "17_2"
+        return (
+          id.includes(`track${trackParam}/`) || id.startsWith(`${trackParam}_`)
+        );
+      });
+
+      return Response.json({
+        type: "FeatureCollection",
+        features: filteredFeatures,
+      });
+    }
+
+    // Otherwise return all features
+    return Response.json(data);
+  } catch (error) {
+    console.error("Error fetching image features:", error);
+    return Response.json(
+      { error: "Failed to fetch image features", message: error.message },
+      { status: 500 }
     );
   }
 }
