@@ -129,9 +129,12 @@ const ImageViewer = ({
         latitude,
         zoom: 15, // A good zoom level for the minimap
         transitionDuration: 500, // Smooth animation
+        transitionInterpolator: {
+          around: [longitude, latitude],
+        },
       });
     }
-  }, [selectedImage]);
+  }, [selectedImage?.properties?.id]); // Using id to ensure we respond to all image changes
 
   // Use keyboard navigation hook
   useKeyboardNavigation({

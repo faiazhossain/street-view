@@ -60,9 +60,11 @@ const MapComponent = ({
 
         // If we're not forcing a refresh, try to get data from local storage first
         if (!forceRefresh) {
-          const localData = loadGeoJsonFromLocal();
+          const localData = await loadGeoJsonFromLocal();
           if (localData && !isGeoJsonStale()) {
-            console.log("Using cached GeoJSON data from local storage");
+            console.log(
+              "Using cached GeoJSON data from IndexedDB/local storage"
+            );
             setGeoJsonData(localData);
             setIsRefreshing(false);
             return;
@@ -100,33 +102,50 @@ const MapComponent = ({
           throw new Error(data.message || "Error in API response");
         }
 
-        // Save data to local storage
-        saveGeoJsonToLocal(data);
-        console.log("Saved GeoJSON data to local storage");
+        // Save data to IndexedDB/local storage
+        try {
+          await saveGeoJsonToLocal(data);
+          console.log("Saved GeoJSON data to IndexedDB/local storage");
+        } catch (storageError) {
+          console.error("Failed to save GeoJSON data locally:", storageError);
+          // Continue with the data even if storage fails
+        }
 
         setGeoJsonData(data);
       } catch (error) {
         console.error("Error fetching GeoJSON data:", error);
 
         // If API fetch failed, try local storage as a fallback
-        const localData = loadGeoJsonFromLocal();
-        if (localData) {
-          console.log("API fetch failed. Using local storage as fallback.");
-          setGeoJsonData(localData);
+        try {
+          const localData = await loadGeoJsonFromLocal();
+          if (localData) {
+            console.log(
+              "API fetch failed. Using IndexedDB/local storage as fallback."
+            );
+            setGeoJsonData(localData);
 
-          // Show non-blocking notification
-          if (!forceRefresh) {
-            // Only show alert if user explicitly requested a refresh
-            if (forceRefresh) {
-              alert(
-                `Could not refresh data: ${error.message}\nUsing cached data instead.`
-              );
+            // Show non-blocking notification
+            if (!forceRefresh) {
+              // Only show alert if user explicitly requested a refresh
+              if (forceRefresh) {
+                alert(
+                  `Could not refresh data: ${error.message}\nUsing cached data instead.`
+                );
+              }
             }
+          } else {
+            // Critical error - no data available
+            alert(
+              `Failed to load map data: ${error.message}\nPlease check your connection and try again.`
+            );
           }
-        } else {
-          // Critical error - no data available
+        } catch (localStorageError) {
+          console.error(
+            "Failed to load from IndexedDB/local storage:",
+            localStorageError
+          );
           alert(
-            `Failed to load map data: ${error.message}\nPlease check your connection and try again.`
+            `Failed to load map data from any source. Please check your connection and try again.`
           );
         }
       } finally {
@@ -232,6 +251,29 @@ const MapComponent = ({
       }));
     }
   }, [displayData]);
+
+  // Fly to the selected point when selectedImageId changes
+  useEffect(() => {
+    if (selectedImageId && displayData?.features) {
+      const selectedFeature = displayData.features.find(
+        (feature) => feature.properties.id === selectedImageId
+      );
+
+      if (selectedFeature) {
+        // Get coordinates based on toggle state (snapped or original)
+        const [lng, lat] = getCoordinates(selectedFeature);
+
+        // Smoothly fly to the selected point
+        setViewState((prev) => ({
+          ...prev,
+          longitude: lng,
+          latitude: lat,
+          transitionDuration: 500, // animation duration in ms
+          zoom: Math.max(prev.zoom, 14), // Ensure we're zoomed in enough to see points
+        }));
+      }
+    }
+  }, [selectedImageId, displayData, useSnappedCoordinates]);
 
   // State to store track groups
   const [trackGroups, setTrackGroups] = useState({});
