@@ -8,6 +8,9 @@ const localFilePath = path.join(process.cwd(), "app/data/cached-geojson.json");
 // A shorter timeout for development, can be longer in production
 const API_TIMEOUT = 8000; // 8 seconds
 
+// How long to consider cached data valid (24 hours by default)
+const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+
 /**
  * API handler for fetching all merged GeoJSON features
  * This acts as a direct proxy to the source API endpoint
@@ -18,21 +21,26 @@ export async function GET(request) {
   try {
     const url = new URL(request.url);
     const forceRefresh = url.searchParams.has("refresh");
-    const useLocal = url.searchParams.has("local") || !forceRefresh;
+    const useLocal = url.searchParams.has("local");
 
-    // Always check for local file first
+    // Check if we have local cache and if it's still valid
     let localFileExists = false;
     let localData = null;
+    let cacheIsStale = true;
 
     try {
       const fileContent = await fs.readFile(localFilePath, "utf8");
       localData = JSON.parse(fileContent);
       localFileExists = true;
 
-      // If we're not forcing a refresh and the local file exists, use it
-      if (useLocal && !forceRefresh) {
-        console.log("Using cached local file GeoJSON data");
+      // Check if cache is stale
+      if (localData._metadata && localData._metadata.timestamp) {
+        const cacheAge = Date.now() - localData._metadata.timestamp;
+        cacheIsStale = cacheAge > CACHE_TTL;
+      }
 
+      // If we're not forcing a refresh and (cache is not stale OR explicit useLocal flag)
+      if (!forceRefresh && (useLocal || !cacheIsStale)) {
         // Return the cached data, but remove metadata
         const returnData = { ...localData };
         if (returnData._metadata) delete returnData._metadata;
@@ -40,14 +48,12 @@ export async function GET(request) {
         return Response.json(returnData);
       }
     } catch (err) {
-      console.log("No local cache file found or it's invalid");
       localFileExists = false;
     }
 
-    // Create an AbortController with a shorter timeout
+    // Create an AbortController with a timeout
     const controller = new AbortController();
     const timeoutId = setTimeout(() => {
-      console.log("API request timeout reached, aborting");
       controller.abort();
     }, API_TIMEOUT);
 
@@ -87,17 +93,15 @@ export async function GET(request) {
               localFilePath,
               JSON.stringify(saveData, null, 2)
             );
-            console.log("Saved local GeoJSON data from localhost API");
 
             return Response.json(data);
           }
         } catch (localError) {
-          console.log("Local API not available, falling back to remote API");
+          // Fallback to remote API
         }
       }
 
       // Fetch merged data from the source API with timeout protection
-      console.log("Fetching from remote API:", apiEndpoint);
       const response = await fetch(apiEndpoint, {
         headers: {
           "Content-Type": "application/json",
@@ -125,7 +129,6 @@ export async function GET(request) {
 
       // Save to local file
       await fs.writeFile(localFilePath, JSON.stringify(saveData, null, 2));
-      console.log("Successfully saved GeoJSON data to local cache file");
 
       // Return the raw GeoJSON data
       return Response.json(data);
@@ -133,16 +136,8 @@ export async function GET(request) {
       // Clear the timeout if it hasn't triggered yet
       clearTimeout(timeoutId);
 
-      console.error(
-        "Error fetching from API:",
-        fetchError.name,
-        fetchError.message
-      );
-
       // If we have a local file, use it as fallback
       if (localFileExists && localData) {
-        console.log("API request failed. Using local file as fallback.");
-
         // Return the cached data, but remove metadata
         const returnData = { ...localData };
         if (returnData._metadata) delete returnData._metadata;
@@ -166,14 +161,12 @@ export async function GET(request) {
       throw fetchError;
     }
   } catch (error) {
-    console.error("Fatal error in API route:", error);
+    console.error("Error in API route:", error);
 
     return Response.json(
       {
         error: "Failed to fetch GeoJSON data",
         message: error.message,
-        solution:
-          "Check the server logs and ensure the API endpoint is available.",
       },
       { status: 500 }
     );

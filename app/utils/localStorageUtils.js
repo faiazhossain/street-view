@@ -13,6 +13,9 @@ const DB_NAME = "StreetViewDB";
 const DB_VERSION = 1;
 const STORE_NAME = "geojsonData";
 
+// Default cache expiration time - 24 hours
+export const DEFAULT_CACHE_TTL = 24 * 60 * 60 * 1000;
+
 /**
  * Initialize the IndexedDB database
  *
@@ -28,7 +31,6 @@ const initDatabase = () => {
       const db = event.target.result;
       if (!db.objectStoreNames.contains(STORE_NAME)) {
         db.createObjectStore(STORE_NAME, { keyPath: "id" });
-        console.log("Created IndexedDB store for GeoJSON data");
       }
     };
 
@@ -76,7 +78,6 @@ export const saveGeoJsonToLocal = async (data) => {
         const request = store.put(record);
 
         request.onsuccess = () => {
-          console.log("GeoJSON data saved to IndexedDB");
           resolve(true);
         };
 
@@ -130,10 +131,8 @@ export const loadGeoJsonFromLocal = async () => {
         request.onsuccess = (event) => {
           const record = event.target.result;
           if (record) {
-            console.log("GeoJSON data loaded from IndexedDB");
             resolve(record.data);
           } else {
-            console.log("No GeoJSON data found in IndexedDB");
             resolve(null);
           }
         };
@@ -168,14 +167,47 @@ export const loadGeoJsonFromLocal = async () => {
 };
 
 /**
- * Get the last fetched timestamp from localStorage
+ * Get the last fetched timestamp from localStorage or IndexedDB
  *
  * @returns {number|null} - Timestamp in milliseconds or null if not found
  */
-export const getLastFetchedTimestamp = () => {
+export const getLastFetchedTimestamp = async () => {
   try {
-    const timestamp = localStorage.getItem(STORAGE_KEYS.LAST_FETCHED);
-    return timestamp ? parseInt(timestamp, 10) : null;
+    // Try IndexedDB first
+    try {
+      const db = await initDatabase();
+
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction([STORE_NAME], "readonly");
+        const store = transaction.objectStore(STORE_NAME);
+
+        const request = store.get("main_geojson");
+
+        request.onsuccess = (event) => {
+          const record = event.target.result;
+          if (record && record.timestamp) {
+            resolve(record.timestamp);
+          } else {
+            // Fall back to localStorage
+            const timestamp = localStorage.getItem(STORAGE_KEYS.LAST_FETCHED);
+            resolve(timestamp ? parseInt(timestamp, 10) : null);
+          }
+        };
+
+        request.onerror = (event) => {
+          // Fall back to localStorage on error
+          const timestamp = localStorage.getItem(STORAGE_KEYS.LAST_FETCHED);
+          resolve(timestamp ? parseInt(timestamp, 10) : null);
+        };
+
+        // Close the database when transaction completes
+        transaction.oncomplete = () => db.close();
+      });
+    } catch (indexedDBError) {
+      // Fall back to localStorage
+      const timestamp = localStorage.getItem(STORAGE_KEYS.LAST_FETCHED);
+      return timestamp ? parseInt(timestamp, 10) : null;
+    }
   } catch (error) {
     console.error("Error getting last fetched timestamp:", error);
     return null;
@@ -185,11 +217,11 @@ export const getLastFetchedTimestamp = () => {
 /**
  * Check if the local GeoJSON data is stale
  *
- * @param {number} maxAge - Maximum age in milliseconds
+ * @param {number} maxAge - Maximum age in milliseconds (defaults to 24 hours)
  * @returns {boolean} - True if data is stale or doesn't exist
  */
-export const isGeoJsonStale = (maxAge = 24 * 60 * 60 * 1000) => {
-  const lastFetched = getLastFetchedTimestamp();
+export const isGeoJsonStale = async (maxAge = DEFAULT_CACHE_TTL) => {
+  const lastFetched = await getLastFetchedTimestamp();
   if (!lastFetched) return true;
 
   return Date.now() - lastFetched > maxAge;
@@ -213,8 +245,6 @@ export const clearGeoJsonData = async () => {
         const request = store.delete("main_geojson");
 
         request.onsuccess = () => {
-          console.log("GeoJSON data cleared from IndexedDB");
-
           // Also clear from localStorage
           localStorage.removeItem(STORAGE_KEYS.GEOJSON_DATA);
           localStorage.removeItem(STORAGE_KEYS.LAST_FETCHED);

@@ -62,9 +62,6 @@ const MapComponent = ({
         if (!forceRefresh) {
           const localData = await loadGeoJsonFromLocal();
           if (localData && !isGeoJsonStale()) {
-            console.log(
-              "Using cached GeoJSON data from IndexedDB/local storage"
-            );
             setGeoJsonData(localData);
             setIsRefreshing(false);
             return;
@@ -78,7 +75,6 @@ const MapComponent = ({
           forceRefresh ? "&refresh=true" : ""
         }`;
 
-        console.log("Fetching GeoJSON data from API");
         const response = await fetch(apiUrl, {
           cache: "no-store",
           // Set longer timeout as we're handling fallbacks properly now
@@ -105,7 +101,6 @@ const MapComponent = ({
         // Save data to IndexedDB/local storage
         try {
           await saveGeoJsonToLocal(data);
-          console.log("Saved GeoJSON data to IndexedDB/local storage");
         } catch (storageError) {
           console.error("Failed to save GeoJSON data locally:", storageError);
           // Continue with the data even if storage fails
@@ -119,9 +114,6 @@ const MapComponent = ({
         try {
           const localData = await loadGeoJsonFromLocal();
           if (localData) {
-            console.log(
-              "API fetch failed. Using IndexedDB/local storage as fallback."
-            );
             setGeoJsonData(localData);
 
             // Show non-blocking notification
@@ -157,6 +149,17 @@ const MapComponent = ({
 
     // Make the fetchGeoJsonData function available to the component
     window.fetchGeoJsonData = fetchGeoJsonData;
+
+    // Set up a background refresh to check for new data periodically (every 30 minutes)
+    const backgroundRefreshInterval = 30 * 60 * 1000; // 30 minutes
+    const backgroundRefresh = setInterval(() => {
+      fetchGeoJsonData(true); // Force refresh in the background
+    }, backgroundRefreshInterval);
+
+    // Clean up the interval when component unmounts
+    return () => {
+      clearInterval(backgroundRefresh);
+    };
   }, [refreshData]);
 
   // Use the GeoJSON data if available, otherwise fall back to the imageData prop
@@ -226,7 +229,7 @@ const MapComponent = ({
     customMapStyle ||
     (darkMode
       ? "https://map.barikoi.com/styles/barikoi-dark-mode/style.json?key=NDE2NzpVNzkyTE5UMUoy"
-      : "https://map.barikoi.com/styles/barikoi-light/style.json?key=NDE2NzpVNzkyTE5UMUoy");
+      : "https://map.barikoi.com/styles/osm_barikoi_v2/style.json?key=NDE2NzpVNzkyTE5UMUoy");
 
   // Initialize view state from initialViewState (if provided) or from the first feature in the data
   const [viewState, setViewState] = useState(
@@ -333,8 +336,6 @@ const MapComponent = ({
         // Check if user clicked on all-points layer
         if (featureId === "all-points") {
           if (feature.properties && feature.properties.id) {
-            console.log("Selected point:", feature.properties.id);
-
             // Update viewport to center on clicked point
             const [lng, lat] = feature.geometry.coordinates;
             setViewState((prev) => ({
@@ -374,11 +375,6 @@ const MapComponent = ({
           });
 
           if (closestFeature && closestFeature.properties.id) {
-            console.log(
-              "Selected nearest point from line:",
-              closestFeature.properties.id
-            );
-
             // Update viewport to center on closest point
             const [lng, lat] = closestFeature.geometry.coordinates;
             setViewState((prev) => ({
