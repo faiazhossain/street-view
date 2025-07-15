@@ -10,7 +10,7 @@ import Map, {
   Marker,
   Popup,
 } from "react-map-gl/maplibre";
-import { FaMapPin } from "react-icons/fa";
+import { FaMapPin, FaCopy, FaCopyright } from "react-icons/fa";
 import SelectedMarker from "./map/SelectedMarker";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useTheme } from "../context/ThemeContext";
@@ -21,6 +21,7 @@ import {
   isGeoJsonStale,
 } from "../utils/localStorageUtils";
 import MapSearchBar from "./ui/MapSearchBar";
+import { FcOk } from "react-icons/fc";
 
 const MapComponent = ({
   imageData,
@@ -48,6 +49,11 @@ const MapComponent = ({
 
   // State for coordinate type toggle (snapped vs original)
   const [useSnappedCoordinates, setUseSnappedCoordinates] = useState(true);
+
+  // State for right-click coordinates popup
+  const [rightClickCoords, setRightClickCoords] = useState(null);
+  const [showCoordsPopup, setShowCoordsPopup] = useState(false);
+  const [copySuccess, setCopySuccess] = useState(false);
 
   // Instead of hover points, we'll create a GeoJSON layer for all points
   const [pointsGeoJSON, setPointsGeoJSON] = useState({
@@ -493,6 +499,39 @@ const MapComponent = ({
     [onImageSelect, trackGroups, pointsGeoJSON]
   );
 
+  // Handle copying coordinates to clipboard
+  const handleCopyCoords = useCallback(() => {
+    if (rightClickCoords) {
+      const coordsText = `${rightClickCoords.lat.toFixed(
+        6
+      )}, ${rightClickCoords.lng.toFixed(6)}`;
+      navigator.clipboard
+        .writeText(coordsText)
+        .then(() => {
+          setCopySuccess(true);
+          // Reset the "Copied!" message after 2 seconds
+          setTimeout(() => setCopySuccess(false), 2000);
+        })
+        .catch((err) => {
+          console.error("Failed to copy coordinates: ", err);
+        });
+    }
+  }, [rightClickCoords]);
+
+  const onMapRightClick = useCallback((event) => {
+    // Prevent default context menu
+    event.preventDefault();
+
+    // Get the coordinates where the user right-clicked
+    const { lngLat } = event;
+
+    // Update state to show the coordinates popup
+    setRightClickCoords(lngLat);
+    setShowCoordsPopup(true);
+    // Reset copy success state
+    setCopySuccess(false);
+  }, []);
+
   // Get all layer IDs for interactive layers - including clusters and path lines
   const interactiveLayerIds = [
     "all-points", // Add the all-points layer as interactive
@@ -541,6 +580,7 @@ const MapComponent = ({
         onMove={(evt) => setViewState(evt.viewState)}
         interactiveLayerIds={interactiveLayerIds}
         onClick={onMapClick}
+        onContextMenu={onMapRightClick}
         dragRotate={!isCompact}
         pitchWithRotate={!isCompact}
         attributionControl={false}
@@ -776,6 +816,45 @@ const MapComponent = ({
                     {searchPinLocation.area}, {searchPinLocation.city}
                   </div>
                 )}
+              </div>
+            </div>
+          </Popup>
+        )}
+
+        {/* Popup for right-click coordinates */}
+        {showCoordsPopup && rightClickCoords && (
+          <Popup
+            longitude={rightClickCoords.lng}
+            latitude={rightClickCoords.lat}
+            closeButton={true}
+            closeOnClick={false}
+            onClose={() => setShowCoordsPopup(false)}
+            anchor='top'
+            offsetTop={10}
+            className='z-20'
+          >
+            <div className='p-2'>
+              <div className='font-medium text-gray-900 mb-1'>Coordinates</div>
+              <div className='flex flex-col text-xs space-y-1'>
+                <div className='flex items-center space-x-2'>
+                  <span className='font-mono text-black bg-gray-100 px-1 rounded'>
+                    {rightClickCoords.lat.toFixed(8)}
+                  </span>
+                  <span className='font-mono text-black bg-gray-100 px-1 rounded'>
+                    {rightClickCoords.lng.toFixed(8)}
+                  </span>
+                  <button
+                    onClick={handleCopyCoords}
+                    className='flex items-center px-1 py-1 rounded-lg text-gray-300 text-sm font-medium transition-all'
+                    title='Copy coordinates'
+                  >
+                    {copySuccess ? (
+                      <FcOk className='mr-1' />
+                    ) : (
+                      <FaCopy className='mr-1' />
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
           </Popup>
