@@ -8,7 +8,9 @@ import Map, {
   ScaleControl,
   AttributionControl,
   Marker,
+  Popup,
 } from "react-map-gl/maplibre";
+import { FaMapPin } from "react-icons/fa";
 import SelectedMarker from "./map/SelectedMarker";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useTheme } from "../context/ThemeContext";
@@ -18,6 +20,7 @@ import {
   saveGeoJsonToLocal,
   isGeoJsonStale,
 } from "../utils/localStorageUtils";
+import MapSearchBar from "./ui/MapSearchBar";
 
 const MapComponent = ({
   imageData,
@@ -37,6 +40,11 @@ const MapComponent = ({
   const [nearbyPoints, setNearbyPoints] = useState([]); // State for nearby points
   const [hoverRadius, setHoverRadius] = useState(0.001); // Configurable hover radius (in degrees)
   const [geoJsonData, setGeoJsonData] = useState(null); // State for the GeoJSON data from API
+  const [showPoints, setShowPoints] = useState(true); // State to control points layer visibility
+
+  // State for search pin location
+  const [searchPinLocation, setSearchPinLocation] = useState(null);
+  const [showSearchPopup, setShowSearchPopup] = useState(false);
 
   // State for coordinate type toggle (snapped vs original)
   const [useSnappedCoordinates, setUseSnappedCoordinates] = useState(true);
@@ -50,6 +58,11 @@ const MapComponent = ({
   // Function to toggle between coordinate types
   const toggleCoordinateType = () => {
     setUseSnappedCoordinates((prev) => !prev);
+  };
+
+  // Function to toggle points layer visibility
+  const togglePointsVisibility = () => {
+    setShowPoints((prev) => !prev);
   };
 
   // Fetch GeoJSON data from API when component mounts or refreshData is called
@@ -491,8 +504,36 @@ const MapComponent = ({
     ]),
   ];
 
+  // Handle location selection from search bar
+  const handleLocationSelect = (location) => {
+    if (location && location.longitude && location.latitude) {
+      // Fly to the selected location with animation
+      setViewState((prev) => ({
+        ...prev,
+        longitude: parseFloat(location.longitude),
+        latitude: parseFloat(location.latitude),
+        zoom: 16, // Zoom in to a good level to see details
+        transitionDuration: 1000, // 1 second animation
+        transitionEasing: (t) => t * (2 - t), // Ease out effect
+      }));
+
+      // Set search pin location and show popup
+      setSearchPinLocation(location);
+      setShowSearchPopup(true);
+
+      // Hide popup after 3 seconds
+    }
+  };
+
   return (
     <div className='relative rounded-xl overflow-hidden shadow-lg'>
+      {/* Add Search Bar - only on full map, not in compact mode */}
+      {!isCompact && (
+        <div className='absolute left-1/2 transform -translate-x-1/2 top-4 z-10 w-full max-w-xl px-4'>
+          <MapSearchBar onLocationSelect={handleLocationSelect} className='' />
+        </div>
+      )}
+
       <Map
         {...viewState}
         style={{ width: "100%", height: isCompact ? "300px" : "75vh" }}
@@ -621,31 +662,124 @@ const MapComponent = ({
             })}
 
         {/* All Points - GeoJSON layer for performance */}
-        <Source id='all-points-source' type='geojson' data={pointsGeoJSON}>
-          <Layer
-            id='all-points'
-            type='circle'
-            paint={{
-              "circle-radius": [
-                "interpolate",
-                ["linear"],
-                ["zoom"],
-                10,
-                3,
-                14,
-                5,
-                18,
-                8,
-              ],
-              "circle-color": darkMode ? "#ff6677" : "#ff1177",
-              "circle-stroke-width": 0.2,
-              "circle-stroke-color": darkMode ? "#ffffff" : "#ffffff",
-              "circle-opacity": 0.8,
-              // Add circle pitch alignment for 3D effect
-              "circle-pitch-alignment": "map",
-            }}
-          />
-        </Source>
+        {showPoints && (
+          <Source id='all-points-source' type='geojson' data={pointsGeoJSON}>
+            <Layer
+              id='all-points'
+              type='circle'
+              paint={{
+                "circle-radius": [
+                  "interpolate",
+                  ["linear"],
+                  ["zoom"],
+                  10,
+                  3,
+                  14,
+                  5,
+                  18,
+                  8,
+                ],
+                "circle-color": darkMode ? "#ff6677" : "#ff1177",
+                "circle-stroke-width": 0.2,
+                "circle-stroke-color": darkMode ? "#ffffff" : "#ffffff",
+                "circle-opacity": 0.8,
+                // Add circle pitch alignment for 3D effect
+                "circle-pitch-alignment": "map",
+              }}
+            />
+          </Source>
+        )}
+
+        {/* Track-specific points layers - also respect showPoints state */}
+        {showPoints &&
+          Object.keys(trackGroups).map((trackName) => (
+            <React.Fragment key={`${trackName}-points`}>
+              {/* Points layer for track */}
+              <Source
+                id={`${trackName}-points-source`}
+                type='geojson'
+                data={getPointsFeatureCollection(
+                  trackGroups[trackName].features
+                )}
+              >
+                <Layer
+                  id={`${trackName}-points`}
+                  type='circle'
+                  paint={{
+                    "circle-radius": [
+                      "interpolate",
+                      ["linear"],
+                      ["zoom"],
+                      10,
+                      3,
+                      14,
+                      5,
+                      18,
+                      8,
+                    ],
+                    "circle-color": "#FF0000", // Red color for all points
+                    "circle-opacity": 0.8,
+                    "circle-stroke-width": 0.5,
+                    "circle-stroke-color": "#fff",
+                  }}
+                />
+              </Source>
+            </React.Fragment>
+          ))}
+
+        {/* Popup for searched locations */}
+        {searchPinLocation && (
+          <Marker
+            longitude={parseFloat(searchPinLocation.longitude)}
+            latitude={parseFloat(searchPinLocation.latitude)}
+            anchor='bottom'
+            onClick={() => setShowSearchPopup(true)}
+          >
+            <FaMapPin
+              className={`text-3xl ${
+                darkMode ? "text-purple-200" : "text-purple-700"
+              } drop-shadow-lg`}
+            />
+          </Marker>
+        )}
+
+        {showSearchPopup && searchPinLocation && (
+          <Popup
+            longitude={parseFloat(searchPinLocation.longitude)}
+            latitude={parseFloat(searchPinLocation.latitude)}
+            closeButton={true}
+            closeOnClick={false}
+            onClose={() => setShowSearchPopup(false)}
+            anchor='top'
+            offsetTop={10}
+            className='z-20'
+          >
+            <div className='p-2'>
+              <div className='font-medium text-gray-900 mb-1'>
+                {searchPinLocation.address || "Searched Location"}
+              </div>
+              <div className='flex flex-col text-sm space-y-1'>
+                <div className='flex items-center space-x-2'>
+                  <span className='font-semibold text-blue-600'>Lat:</span>
+                  <span className='font-mono text-black bg-gray-100 px-1 rounded'>
+                    {parseFloat(searchPinLocation.latitude).toFixed(6)}
+                  </span>
+                </div>
+                <div className='flex items-center space-x-2'>
+                  <span className='font-semibold text-blue-600'>Lng:</span>
+                  <span className='font-mono text-black bg-gray-100 px-1 rounded'>
+                    {parseFloat(searchPinLocation.longitude).toFixed(6)}
+                  </span>
+                </div>
+                {searchPinLocation.area && (
+                  <div className='mt-1 text-gray-600'>
+                    {searchPinLocation.area}, {searchPinLocation.city}
+                  </div>
+                )}
+              </div>
+            </div>
+          </Popup>
+        )}
       </Map>
 
       {/* Refresh button in the top-left corner */}
@@ -672,30 +806,53 @@ const MapComponent = ({
       <div className={`absolute top-3 right-${isCompact ? "3" : "16"} z-10`}>
         {isCompact ? (
           /* Compact toggle for mini-map */
-          <button
-            onClick={toggleCoordinateType}
-            className='bg-white bg-opacity-70 p-1 rounded shadow-sm flex items-center text-xs border border-gray-200'
-            title={
-              useSnappedCoordinates
-                ? "Using: Snapped Path"
-                : "Using: Original Path"
-            }
-          >
-            <div
-              className={`w-6 h-3 rounded-full relative ${
-                useSnappedCoordinates ? "bg-blue-500" : "bg-gray-300"
-              }`}
+          <div className='flex flex-col gap-1'>
+            <button
+              onClick={toggleCoordinateType}
+              className='bg-white bg-opacity-70 p-1 rounded shadow-sm flex items-center text-xs border border-gray-200'
+              title={
+                useSnappedCoordinates
+                  ? "Using: Snapped Path"
+                  : "Using: Original Path"
+              }
             >
               <div
-                className={`absolute w-2.5 h-2.5 rounded-full bg-white shadow-sm transform transition-transform duration-200 ease-in-out ${
-                  useSnappedCoordinates ? "translate-x-3" : "translate-x-0.5"
-                } top-[1px]`}
-              ></div>
-            </div>
-            <span className='ml-1 text-[10px] font-medium'>
-              {useSnappedCoordinates ? "S" : "O"}
-            </span>
-          </button>
+                className={`w-6 h-3 rounded-full relative ${
+                  useSnappedCoordinates ? "bg-blue-500" : "bg-gray-300"
+                }`}
+              >
+                <div
+                  className={`absolute w-2.5 h-2.5 rounded-full bg-white shadow-sm transform transition-transform duration-200 ease-in-out ${
+                    useSnappedCoordinates ? "translate-x-3" : "translate-x-0.5"
+                  } top-[1px]`}
+                ></div>
+              </div>
+              <span className='ml-1 text-[10px] font-medium'>
+                {useSnappedCoordinates ? "S" : "O"}
+              </span>
+            </button>
+
+            <button
+              onClick={togglePointsVisibility}
+              className='bg-white bg-opacity-70 p-1 rounded shadow-sm flex items-center text-xs border border-gray-200'
+              title={showPoints ? "Hide Map Points" : "Show Map Points"}
+            >
+              <div
+                className={`w-6 h-3 rounded-full relative ${
+                  showPoints ? "bg-green-500" : "bg-gray-300"
+                }`}
+              >
+                <div
+                  className={`absolute w-2.5 h-2.5 rounded-full bg-white shadow-sm transform transition-transform duration-200 ease-in-out ${
+                    showPoints ? "translate-x-3" : "translate-x-0.5"
+                  } top-[1px]`}
+                ></div>
+              </div>
+              <span className='ml-1 text-[10px] font-medium'>
+                {showPoints ? "P" : "P"}
+              </span>
+            </button>
+          </div>
         ) : (
           /* Full-size toggle for main map */
           <button
@@ -739,6 +896,56 @@ const MapComponent = ({
           </button>
         )}
       </div>
+
+      {/* Toggle buttons container */}
+      {!isCompact && (
+        <div className='absolute top-14 right-16 z-10'>
+          <button
+            onClick={togglePointsVisibility}
+            className='glass px-4 py-3 rounded-xl shadow-lg text-sm font-semibold flex items-center space-x-2 transition-all hover:shadow-xl border border-white/30 mb-2'
+          >
+            <svg
+              xmlns='http://www.w3.org/2000/svg'
+              fill='none'
+              viewBox='0 0 24 24'
+              stroke-width='1.5'
+              stroke='currentColor'
+              className={`w-5 h-5 ${
+                showPoints ? "text-green-600" : "text-gray-600"
+              }`}
+            >
+              <path
+                stroke-linecap='round'
+                stroke-linejoin='round'
+                d='M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z'
+              />
+              <path
+                stroke-linecap='round'
+                stroke-linejoin='round'
+                d='M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z'
+              />
+            </svg>
+            <span
+              className={
+                showPoints ? "text-green-600 font-bold" : "text-gray-600"
+              }
+            >
+              {showPoints ? "Points Visible" : "Points Hidden"}
+            </span>
+            <div
+              className={`w-10 h-5 rounded-full p-0.5 ml-1 transition-colors duration-300 ${
+                showPoints ? "bg-green-500" : "bg-gray-300"
+              }`}
+            >
+              <div
+                className={`w-4 h-4 rounded-full bg-white transform duration-300 ease-in-out shadow-md ${
+                  showPoints ? "translate-x-5" : "translate-x-0"
+                }`}
+              ></div>
+            </div>
+          </button>
+        </div>
+      )}
 
       {/* Instructions overlay - only on main map */}
       {!isCompact && (
