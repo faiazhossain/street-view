@@ -697,6 +697,7 @@ const MapComponent = ({
                 <SelectedMarker
                   key={feature.properties.id}
                   feature={markerFeature}
+                  images={imageData.features}
                 />
               );
             })}

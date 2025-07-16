@@ -60,7 +60,7 @@ const MapSearchBar = ({ onLocationSelect, className }) => {
       const response = await fetch(
         `https://barikoi.xyz/v2/api/search/autocomplete/place?api_key=NDE2NzpVNzkyTE5UMUoy&q=${encodeURIComponent(
           value
-        )}&city=dhaka&sub_area=true&sub_district=true`
+        )}&sub_area=true&sub_district=true`
       );
       const data = await response.json();
 
