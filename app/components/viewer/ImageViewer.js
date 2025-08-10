@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useCallback } from "react";
 import { useKeyboardNavigation } from "../../hooks/useKeyboardNavigation";
 import { useSelector } from "react-redux";
 import { selectShowControls } from "../../redux/slices/uiControlsSlice";
@@ -10,6 +10,23 @@ import ViewerFooter from "./ViewerFooter";
 import MapComponent from "../MapComponent";
 import "../../styles/pannellum-hotspots.css";
 import { FcCompactCamera } from "react-icons/fc";
+
+// Helper function to extract track and image numbers from image ID
+const parseImageId = (id) => {
+  // If no id is provided, return default values
+  if (!id) return { trackNumber: 0, imageNumber: 0 };
+
+  // For backward compatibility, try to parse from the id directly
+  const idMatch = String(id).match(/^(\d+)_(\d+)/);
+  if (idMatch) {
+    return {
+      trackNumber: parseInt(idMatch[1], 10),
+      imageNumber: parseInt(idMatch[2], 10),
+    };
+  }
+
+  return { trackNumber: 0, imageNumber: 0 };
+};
 
 const ImageViewer = ({
   selectedImage,
@@ -167,7 +184,12 @@ const ImageViewer = ({
     return caption;
   };
 
-  if (!selectedImage) return null;
+  // Use feature_id if available, otherwise fall back to id
+  const currentFeatureId =
+    selectedImage?.properties?.feature_id || selectedImage?.properties?.id;
+
+  // Parse current track and image number
+  const { trackNumber, imageNumber } = parseImageId(currentFeatureId);
 
   return (
     <div className='fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/95 backdrop-blur-sm'>
@@ -176,7 +198,13 @@ const ImageViewer = ({
           fadeIn ? "fade-in" : ""
         }`}
       >
-        <ViewerHeader title={`ThirdEye360`} onClose={onClose} />
+        <ViewerHeader
+          title={`ThirdEye360`}
+          onClose={onClose}
+          showControls={showControls}
+          trackNumber={trackNumber}
+          imageNumber={imageNumber}
+        />
 
         <div className='relative flex-grow overflow-hidden'>
           <PannellumViewer
@@ -184,6 +212,7 @@ const ImageViewer = ({
             images={images}
             onPrevImage={onPrevImage}
             onNextImage={onNextImage}
+            showControls={showControls}
           />
 
           {/* Floating Image Information - Always visible on top right */}
