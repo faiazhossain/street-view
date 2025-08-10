@@ -25,8 +25,8 @@ export function useImageData() {
 
       // Add timestamp to URL to bypass any potential caching
       const timestamp = Date.now();
-      // Use the new merge-all endpoint to get GeoJSON data in the optimized format
-      const response = await fetch(`/api/features/merge-all?_t=${timestamp}`);
+      // Use the new API endpoint to get GeoJSON data
+      const response = await fetch(`/api/features?_t=${timestamp}`);
 
       if (!response.ok) {
         throw new Error(`API responded with status: ${response.status}`);
@@ -49,9 +49,12 @@ export function useImageData() {
         const trackGroups = {};
 
         result.features.forEach((feature) => {
+          // Get ID for track extraction - try feature_id first (new format), then fall back to id (old format)
+          const idForTrack =
+            feature.properties.feature_id || feature.properties.id;
+
           // Extract track identifier from the ID (format "XX_YY" where XX is track)
-          const id = feature.properties.id;
-          const trackMatch = id.match(/^(\d+)_/);
+          const trackMatch = idForTrack?.match(/^(\d+)_/);
           const trackId = trackMatch ? trackMatch[1] : "default";
 
           if (!trackGroups[trackId]) {

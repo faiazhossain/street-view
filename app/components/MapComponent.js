@@ -90,7 +90,7 @@ const MapComponent = ({
         // Add timestamp to prevent caching issues
         const timestamp = new Date().getTime();
         // Add refresh parameter if we're forcing refresh
-        const apiUrl = `/api/features/merge-all?_t=${timestamp}${
+        const apiUrl = `/api/features?_t=${timestamp}${
           forceRefresh ? "&refresh=true" : ""
         }`;
 
@@ -563,6 +563,60 @@ const MapComponent = ({
       // Hide popup after 3 seconds
     }
   };
+
+  // Group images by their track ID
+  // useEffect(() => {
+  //   if (!imageData.features || imageData.features.length === 0) return;
+
+  //   const groups = {};
+
+  //   // Process each image
+  //   imageData.features.forEach((feature) => {
+  //     // Get the id for track identification - try feature_id first (new format), then fall back to id (old format)
+  //     const idForTrack = feature.properties.feature_id || feature.properties.id;
+
+  //     // Determine track name:
+  //     // 1. For format like "img_track0_265" - extract "track0"
+  //     // 2. For format like "0_1" - convert to "track0"
+  //     // 3. Fallback to default
+  //     let trackName;
+
+  //     // Extract track name using regex (e.g., "track0" from "img_track0_265")
+  //     const trackMatch = idForTrack?.match(/img_([^_]+)/);
+
+  //     // New format handling for IDs like "0_1" - extract the first part as track
+  //     const newFormatMatch = idForTrack?.match(/^(\d+)_\d+$/);
+
+  //     if (trackMatch) {
+  //       trackName = trackMatch[1]; // This will be "track0", "track1", etc.
+  //     } else if (newFormatMatch) {
+  //       trackName = "track" + newFormatMatch[1]; // Convert "0_1" to "track0"
+  //     } else {
+  //       trackName = "default"; // Fallback name
+  //     }
+
+  //     // Initialize track group if first time seeing this track
+  //     if (!groups[trackName]) {
+  //       groups[trackName] = {
+  //         features: [],
+  //         color: getTrackColor(trackName), // Get a unique color for each track
+  //         path: {
+  //           type: "Feature",
+  //           properties: {},
+  //           geometry: {
+  //             type: "LineString",
+  //             coordinates: [],
+  //           },
+  //         },
+  //       };
+  //     }
+
+  //     // Add feature to track group
+  //     groups[trackName].features.push(feature);
+  //   });
+
+  //   setTrackGroups(groups);
+  // }, [imageData, darkMode]);
 
   return (
     <div className='relative rounded-xl overflow-hidden shadow-lg'>

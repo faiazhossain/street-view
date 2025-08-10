@@ -59,13 +59,13 @@ export async function GET(request) {
 
     try {
       // Choose API endpoint based on environment
-      let apiEndpoint = "http://202.72.236.166:8001/api/features/merge-all";
+      let apiEndpoint = "http://202.72.236.166:8001/api/features";
 
       // If we're in development, try localhost first
       if (process.env.NODE_ENV === "development") {
         try {
           const localResponse = await fetch(
-            "http://localhost:8001/api/features/merge-all",
+            "http://localhost:8001/api/features",
             {
               headers: {
                 "Content-Type": "application/json",

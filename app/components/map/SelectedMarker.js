@@ -15,8 +15,13 @@ const SelectedMarker = ({ feature, images }) => {
   const cameraYaw = savedViewPosition?.yaw || 0;
 
   // Helper function to extract track and image numbers from image ID
-  const parseImageId = (id) => {
-    const match = id.match(/^(\d+)_(\d+)/);
+  const parseImageId = (feature) => {
+    // Get feature_id (new format) or fallback to id (old format)
+    const id = feature.properties.feature_id || feature.properties.id;
+
+    if (!id) return { trackNumber: 0, imageNumber: 0 };
+
+    const match = String(id).match(/^(\d+)_(\d+)/);
     if (match) {
       return {
         trackNumber: parseInt(match[1], 10),
@@ -29,9 +34,7 @@ const SelectedMarker = ({ feature, images }) => {
   // Helper function to find image by track and image number
   const findImageByTrackAndNumber = (trackNumber, imageNumber) => {
     return images?.find((image) => {
-      const { trackNumber: t, imageNumber: i } = parseImageId(
-        image.properties.id
-      );
+      const { trackNumber: t, imageNumber: i } = parseImageId(image);
       return t === trackNumber && i === imageNumber;
     });
   };
@@ -55,8 +58,7 @@ const SelectedMarker = ({ feature, images }) => {
   const findNextImage = () => {
     if (!images || images.length === 0) return null;
 
-    const currentId = feature.properties.id;
-    const { trackNumber, imageNumber } = parseImageId(currentId);
+    const { trackNumber, imageNumber } = parseImageId(feature);
 
     // Try to find the next sequential image number in the same track
     let nextImage = findImageByTrackAndNumber(trackNumber, imageNumber + 1);
@@ -64,9 +66,7 @@ const SelectedMarker = ({ feature, images }) => {
     // If no next image in current track, try to find the first image in the next track
     if (!nextImage) {
       const tracks = Array.from(
-        new Set(
-          images.map((image) => parseImageId(image.properties.id).trackNumber)
-        )
+        new Set(images.map((image) => parseImageId(image).trackNumber))
       ).sort((a, b) => a - b);
 
       const currentTrackIndex = tracks.indexOf(trackNumber);
@@ -74,13 +74,13 @@ const SelectedMarker = ({ feature, images }) => {
       if (currentTrackIndex < tracks.length - 1) {
         const nextTrackNumber = tracks[currentTrackIndex + 1];
         const nextTrackImages = images.filter((image) => {
-          const { trackNumber: t } = parseImageId(image.properties.id);
+          const { trackNumber: t } = parseImageId(image);
           return t === nextTrackNumber;
         });
 
         nextTrackImages.sort((a, b) => {
-          const imgA = parseImageId(a.properties.id).imageNumber;
-          const imgB = parseImageId(b.properties.id).imageNumber;
+          const imgA = parseImageId(a).imageNumber;
+          const imgB = parseImageId(b).imageNumber;
           return imgA - imgB;
         });
 

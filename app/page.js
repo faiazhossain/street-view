@@ -14,22 +14,27 @@ export default function Home() {
 
   // Helper function to extract track and image numbers from image ID
   const parseImageId = (id) => {
-    const match = id.match(/^(\d+)_(\d+)/);
-    if (match) {
+    // If no id is provided, return default values
+    if (!id) return { trackNumber: 0, imageNumber: 0 };
+
+    // For backward compatibility, try to parse from the id directly
+    const idMatch = String(id).match(/^(\d+)_(\d+)/);
+    if (idMatch) {
       return {
-        trackNumber: parseInt(match[1], 10),
-        imageNumber: parseInt(match[2], 10),
+        trackNumber: parseInt(idMatch[1], 10),
+        imageNumber: parseInt(idMatch[2], 10),
       };
     }
+
     return { trackNumber: 0, imageNumber: 0 };
   };
 
   // Helper function to find image by track and image number
   const findImageByTrackAndNumber = (trackNumber, imageNumber) => {
     return imageData.features.find((feature) => {
-      const { trackNumber: t, imageNumber: i } = parseImageId(
-        feature.properties.id
-      );
+      // Check feature_id first (new format), then fall back to id (old format)
+      const featureId = feature.properties.feature_id || feature.properties.id;
+      const { trackNumber: t, imageNumber: i } = parseImageId(featureId);
       return t === trackNumber && i === imageNumber;
     });
   };

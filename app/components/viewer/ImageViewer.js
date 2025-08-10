@@ -9,7 +9,6 @@ import ViewerHeader from "./ViewerHeader";
 import ViewerFooter from "./ViewerFooter";
 import MapComponent from "../MapComponent";
 import "../../styles/pannellum-hotspots.css";
-import { FaLocationArrow } from "react-icons/fa";
 import { FcCompactCamera } from "react-icons/fc";
 
 const ImageViewer = ({
@@ -18,7 +17,6 @@ const ImageViewer = ({
   onPrevImage,
   onNextImage,
   onClose,
-  imageData,
   pathData,
   onImageSelect,
 }) => {
@@ -144,6 +142,31 @@ const ImageViewer = ({
     isActive: !!selectedImage,
   });
 
+  // Function to get display caption for the current image
+  const getImageCaption = () => {
+    if (!selectedImage) return "";
+
+    // Try to get feature_id (new format) or fallback to id (old format)
+    const displayId =
+      selectedImage.properties.feature_id || selectedImage.properties.id;
+
+    // Show the image ID and date if available
+    let caption = `Image: ${displayId}`;
+
+    if (selectedImage.properties.capture_date) {
+      // Format the date nicely if it exists
+      const date = new Date(selectedImage.properties.capture_date);
+      const formattedDate = date.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      });
+      caption += ` (${formattedDate})`;
+    }
+
+    return caption;
+  };
+
   if (!selectedImage) return null;
 
   return (
@@ -203,7 +226,7 @@ const ImageViewer = ({
                   <div>
                     <span className='text-gray-400 text-xs'>Captured: </span>
                     <span className='text-white/90'>
-                      {formatCompactDate(selectedImage.properties.created_at)}
+                      {formatCompactDate(selectedImage.properties.capture_date)}
                     </span>
                   </div>
                 </div>

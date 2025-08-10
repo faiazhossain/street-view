@@ -23,26 +23,44 @@ export async function GET(request) {
     // Try to use the local cached file first
     let data;
     try {
+      if (forceRefresh) {
+        throw new Error("Force refresh requested, skipping cache");
+      }
       const fileContent = await fs.readFile(localFilePath, "utf8");
       data = JSON.parse(fileContent);
+      console.log("Using cached GeoJSON data");
     } catch (err) {
       // Local cache file not found or invalid, fetching from API
-      const response = await fetch(
-        "http://202.72.236.166:8001/api/features/merge-all",
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-          // Add cache: 'no-store' to prevent reusing previous response
-          cache: "no-store",
-        }
-      );
+      console.log("Fetching fresh data from API");
+      const response = await fetch("http://202.72.236.166:8001/api/features", {
+        headers: {
+          "Content-Type": "application/json",
+        },
+        // Add cache: 'no-store' to prevent reusing previous response
+        cache: "no-store",
+      });
 
       if (!response.ok) {
         throw new Error(`API response error: ${response.status}`);
       }
 
       data = await response.json();
+
+      // Save the fetched data to the local cache file with metadata
+      try {
+        const saveData = {
+          ...data,
+          _metadata: {
+            timestamp: Date.now(),
+            source: "http://202.72.236.166:8001/api/features",
+          },
+        };
+        await fs.writeFile(localFilePath, JSON.stringify(saveData, null, 2));
+        console.log("Successfully cached GeoJSON data to:", localFilePath);
+      } catch (writeError) {
+        console.error("Failed to write cache file:", writeError);
+        // Continue even if cache writing fails
+      }
     }
 
     // If track parameter is specified, filter features by track

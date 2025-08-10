@@ -9,7 +9,7 @@ import {
 } from "../../redux/slices/uiControlsSlice";
 import { TbSunFilled } from "react-icons/tb";
 
-const ViewerHeader = ({ title, onClose }) => {
+const ViewerHeader = ({ title, subtitle, onClose, selectedImage }) => {
   const { darkMode, toggleDarkMode } = useTheme();
   const dispatch = useDispatch();
   const showControls = useSelector(selectShowControls);
@@ -18,9 +18,27 @@ const ViewerHeader = ({ title, onClose }) => {
     dispatch(toggleControlsVisibility());
   };
 
+  // Generate a display subtitle based on the selected image if available
+  const displaySubtitle = () => {
+    if (!selectedImage) return subtitle;
+
+    // Use feature_id (new format) or fall back to id (old format)
+    const displayId =
+      selectedImage.properties.feature_id || selectedImage.properties.id;
+
+    return `Image: ${displayId}`;
+  };
+
+  if (!showControls) return null;
+
   return (
     <div className='flex justify-between items-center p-4 text-white glass border-b border-white/10 backdrop-blur-md'>
-      <h2 className='text-xl font-bold gradient-text'>{title}</h2>
+      <div className='flex flex-col'>
+        <h2 className='text-xl font-bold gradient-text'>{title}</h2>
+        {(subtitle || selectedImage) && (
+          <p className='text-gray-300 text-sm'>{displaySubtitle()}</p>
+        )}
+      </div>
       <div className='flex items-center space-x-4'>
         {/* Clean UI Toggle Button */}
         <button
