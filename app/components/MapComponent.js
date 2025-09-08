@@ -25,7 +25,6 @@ import { FcOk } from "react-icons/fc";
 
 const MapComponent = ({
   imageData,
-  pathData,
   selectedImageId,
   onImageSelect,
   isCompact = false,
@@ -36,10 +35,6 @@ const MapComponent = ({
 }) => {
   const { darkMode } = useTheme();
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [hoveredPoint, setHoveredPoint] = useState(null);
-  const [isHoveringPath, setIsHoveringPath] = useState(false);
-  const [nearbyPoints, setNearbyPoints] = useState([]); // State for nearby points
-  const [hoverRadius, setHoverRadius] = useState(0.001); // Configurable hover radius (in degrees)
   const [geoJsonData, setGeoJsonData] = useState(null); // State for the GeoJSON data from API
   const [showPoints, setShowPoints] = useState(true); // State to control points layer visibility
 
@@ -373,8 +368,6 @@ const MapComponent = ({
           const featureId = feature.layer.id;
           const featureProps = feature.properties;
 
-          console.log("Feature clicked:", featureId, feature.properties);
-
           // Check if user clicked on vector tile layer point (from thirdEye source)
           if (featureId === "Images") {
             if (feature.properties && feature.properties.id) {
@@ -390,97 +383,11 @@ const MapComponent = ({
                 transitionDuration: 500, // smooth animation in ms
               }));
 
-              onImageSelect(feature.properties.id);
+              // Pass the entire feature properties instead of just the ID
+              // This will include imageUrl_Comp and imageUrl_High if available
+              onImageSelect(feature.properties);
             }
             return;
-          }
-
-          // Handle clicks on track-specific points and paths - if they exist
-          // Check if the user clicked on a cluster
-          if (
-            featureId &&
-            (featureId.endsWith("-clusters") ||
-              featureId.endsWith("-cluster-count"))
-          ) {
-            // Get the cluster source
-            const trackName = featureId.split("-")[0];
-            const source = map.getSource(`${trackName}-points-source`);
-
-            if (source) {
-              // Zoom in on cluster when clicked
-              const clusterId = featureProps.cluster_id;
-              source.getClusterExpansionZoom(clusterId, (err, zoom) => {
-                if (err) return;
-
-                // Zoom in to the cluster
-                map.easeTo({
-                  center: feature.geometry.coordinates,
-                  zoom: zoom + 0.5, // Add a bit of extra zoom for better visibility
-                  duration: 500,
-                });
-              });
-            }
-          }
-          // Handle clicks on individual unclustered points
-          else if (
-            featureId &&
-            featureId.endsWith("-points") &&
-            feature.properties &&
-            feature.properties.id
-          ) {
-            // Update viewport to center on clicked point
-            const [lng, lat] = feature.geometry.coordinates;
-            setViewState((prev) => ({
-              ...prev,
-              longitude: lng,
-              latitude: lat,
-              transitionDuration: 500, // smooth animation in ms
-            }));
-
-            onImageSelect(feature.properties.id);
-          }
-          // Handle clicks on path lines
-          else if (featureId && featureId.endsWith("-path-line")) {
-            const trackName = featureId.replace("-path-line", "");
-            const trackFeatures = trackGroups[trackName]?.features;
-
-            if (trackFeatures && trackFeatures.length > 0) {
-              // Get click coordinates
-              const clickPoint = [event.lngLat.lng, event.lngLat.lat];
-
-              // Find the closest point in this track
-              let closestFeature = null;
-              let minDistance = Infinity;
-
-              trackFeatures.forEach((feature) => {
-                const [lon, lat] = getCoordinates(feature);
-                // Simple Euclidean distance - sufficient for small distances
-                const distance =
-                  Math.sqrt(
-                    Math.pow(clickPoint[0] - lon, 2) +
-                      Math.pow(clickPoint[1] - lat, 2)
-                  ) || 0;
-
-                if (distance < minDistance) {
-                  minDistance = distance;
-                  closestFeature = feature;
-                }
-              });
-
-              // Select the closest image
-              if (closestFeature) {
-                // Update viewport to center on closest feature
-                const [lon, lat] = getCoordinates(closestFeature);
-                setViewState((prev) => ({
-                  ...prev,
-                  longitude: lon,
-                  latitude: lat,
-                  transitionDuration: 500, // smooth animation in ms
-                }));
-
-                onImageSelect(closestFeature.properties.id);
-              }
-            }
           }
         }
       } catch (error) {

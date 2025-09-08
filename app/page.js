@@ -8,6 +8,7 @@ import { useImageData } from "./data/imageData";
 
 export default function Home() {
   const [selectedImageId, setSelectedImageId] = useState(null);
+  const [selectedImageData, setSelectedImageData] = useState(null);
   const [showViewer, setShowViewer] = useState(false);
   const { imageData, imagePath, isLoading, error, refreshData } =
     useImageData();
@@ -39,8 +40,17 @@ export default function Home() {
     });
   };
 
-  const handleImageSelect = useCallback((imageId) => {
-    setSelectedImageId(imageId);
+  const handleImageSelect = useCallback((imageData) => {
+    // Check if imageData is a string (old behavior - just ID) or an object (new behavior - full properties)
+    if (typeof imageData === "string" || typeof imageData === "number") {
+      // If it's just the ID (old behavior)
+      setSelectedImageId(imageData);
+      setSelectedImageData(null);
+    } else {
+      // If it's the complete image properties object (new behavior)
+      setSelectedImageId(imageData.id);
+      setSelectedImageData(imageData);
+    }
     setShowViewer(true);
   }, []);
 
@@ -49,6 +59,58 @@ export default function Home() {
   }, []);
 
   const handleNextImage = useCallback(() => {
+    // If we have selectedImageData (direct URLs from map click), handle navigation differently
+    if (selectedImageData) {
+      // Extract the current track and image number from the ID or image URL
+      let trackNumber, imageNumber;
+
+      if (selectedImageData.id) {
+        // If we have an ID, parse it
+        const parsed = parseImageId(selectedImageData.id);
+        trackNumber = parsed.trackNumber;
+        imageNumber = parsed.imageNumber;
+      } else if (
+        selectedImageData.imageUrl_Comp ||
+        selectedImageData.imageUrl_High
+      ) {
+        // Extract from URL pattern like "http://202.72.236.166:8001/track0/0_1.jpg"
+        const url =
+          selectedImageData.imageUrl_Comp || selectedImageData.imageUrl_High;
+        const match = url.match(/track(\d+)\/(\d+)_(\d+)/);
+        if (match) {
+          trackNumber = parseInt(match[2], 10);
+          imageNumber = parseInt(match[3], 10);
+        }
+      }
+
+      // If we successfully parsed the track and image numbers
+      if (trackNumber !== undefined && imageNumber !== undefined) {
+        // Create the next image data with updated URLs
+        const nextImageNumber = imageNumber + 1;
+        const baseUrl = selectedImageData.imageUrl_Comp
+          ? selectedImageData.imageUrl_Comp.split(
+              `${trackNumber}_${imageNumber}`
+            )[0]
+          : `http://202.72.236.166:8001/track${trackNumber}/`;
+
+        const nextImageData = {
+          ...selectedImageData,
+          id: `${trackNumber}_${nextImageNumber}`,
+          imageUrl_Comp: baseUrl + `${trackNumber}_${nextImageNumber}.jpg`,
+          imageUrl_High: baseUrl + `${trackNumber}_${nextImageNumber}.jpg`,
+          initialYaw: selectedImageData.initialYaw || 0,
+          initialPitch: selectedImageData.initialPitch || 0,
+          initialHfov: selectedImageData.initialHfov || 100,
+        };
+
+        // Update the state with the new image data
+        setSelectedImageId(nextImageData.id);
+        setSelectedImageData(nextImageData);
+        return;
+      }
+    }
+
+    // Original logic for database images
     if (!selectedImageId || imageData.features.length === 0) return;
 
     // Find the selected image object
@@ -116,10 +178,67 @@ export default function Home() {
     // Update selected image if we found a next one
     if (nextImage) {
       setSelectedImageId(nextImage.properties.id);
+      setSelectedImageData(null); // Reset direct image data when navigating
     }
-  }, [selectedImageId, imageData.features]);
+  }, [selectedImageId, selectedImageData, imageData.features]);
 
   const handlePrevImage = useCallback(() => {
+    // If we have selectedImageData (direct URLs from map click), handle navigation differently
+    if (selectedImageData) {
+      // Extract the current track and image number from the ID or image URL
+      let trackNumber, imageNumber;
+
+      if (selectedImageData.id) {
+        // If we have an ID, parse it
+        const parsed = parseImageId(selectedImageData.id);
+        trackNumber = parsed.trackNumber;
+        imageNumber = parsed.imageNumber;
+      } else if (
+        selectedImageData.imageUrl_Comp ||
+        selectedImageData.imageUrl_High
+      ) {
+        // Extract from URL pattern like "http://202.72.236.166:8001/track0/0_1.jpg"
+        const url =
+          selectedImageData.imageUrl_Comp || selectedImageData.imageUrl_High;
+        const match = url.match(/track(\d+)\/(\d+)_(\d+)/);
+        if (match) {
+          trackNumber = parseInt(match[2], 10);
+          imageNumber = parseInt(match[3], 10);
+        }
+      }
+
+      // If we successfully parsed the track and image numbers and not at the first image
+      if (
+        trackNumber !== undefined &&
+        imageNumber !== undefined &&
+        imageNumber > 0
+      ) {
+        // Create the previous image data with updated URLs
+        const prevImageNumber = imageNumber - 1;
+        const baseUrl = selectedImageData.imageUrl_Comp
+          ? selectedImageData.imageUrl_Comp.split(
+              `${trackNumber}_${imageNumber}`
+            )[0]
+          : `http://202.72.236.166:8001/track${trackNumber}/`;
+
+        const prevImageData = {
+          ...selectedImageData,
+          id: `${trackNumber}_${prevImageNumber}`,
+          imageUrl_Comp: baseUrl + `${trackNumber}_${prevImageNumber}.jpg`,
+          imageUrl_High: baseUrl + `${trackNumber}_${prevImageNumber}.jpg`,
+          initialYaw: selectedImageData.initialYaw || 0,
+          initialPitch: selectedImageData.initialPitch || 0,
+          initialHfov: selectedImageData.initialHfov || 100,
+        };
+
+        // Update the state with the new image data
+        setSelectedImageId(prevImageData.id);
+        setSelectedImageData(prevImageData);
+        return;
+      }
+    }
+
+    // Original logic for database images
     if (!selectedImageId || imageData.features.length === 0) return;
 
     // Find the selected image object
@@ -187,11 +306,23 @@ export default function Home() {
     // Update selected image if we found a previous one
     if (prevImage) {
       setSelectedImageId(prevImage.properties.id);
+      setSelectedImageData(null); // Reset direct image data when navigating
     }
-  }, [selectedImageId, imageData.features]);
+  }, [selectedImageId, selectedImageData, imageData.features]);
 
-  // Find the selected image object
-  const selectedImage = selectedImageId
+  // Create a combined selected image object using either direct data or from the features
+  const selectedImage = selectedImageData
+    ? {
+        // Create a feature-like object from the direct image data
+        properties: selectedImageData,
+        geometry: {
+          coordinates: [
+            selectedImageData.longitude_snapped || 0,
+            selectedImageData.latitude_snapped || 0,
+          ],
+        },
+      }
+    : selectedImageId
     ? imageData.features.find(
         (feature) => feature.properties.id === selectedImageId
       )

@@ -31,6 +31,7 @@ const PannellumViewer = ({
   const [pannellumInstance, setPannellumInstance] = useState(null);
   const viewerId = useRef(`panorama-viewer-${Date.now()}`); // Generate unique ID for each instance
   const [isHDMode, setIsHDMode] = useState(false); // Default to compressed mode for better initial performance
+  const [isLoading, setIsLoading] = useState(false); // Add loading state for image transitions
 
   // Redux
   const dispatch = useDispatch();
@@ -50,6 +51,9 @@ const PannellumViewer = ({
     if (pannellumInstance && selectedImage) {
       // Save current view position before switching
       saveCurrentViewPosition();
+
+      // Set loading state
+      setIsLoading(true);
 
       // Toggle HD mode
       setIsHDMode((prev) => !prev);
@@ -234,23 +238,25 @@ const PannellumViewer = ({
             ? savedViewPosition.hfov
             : selectedImage.properties.initialHfov || 100;
 
+          // Determine which image URL to use - preferring the _Comp and _High properties
+          const imageUrl = isHDMode
+            ? selectedImage.properties.imageUrl_High ||
+              selectedImage.properties.imageUrl
+            : selectedImage.properties.imageUrl_Comp ||
+              selectedImage.properties.imageUrl;
+
           // Log the view values for debugging only when needed
           if (process.env.NODE_ENV === "development" && false) {
             // Set to true when debugging is needed
             console.log(
               `Initial values - Yaw: ${initialYaw}, Pitch: ${initialPitch}, HFOV: ${initialHfov}`
             );
+            console.log(`Using image URL: ${imageUrl}`);
           }
 
           const viewer = window.pannellum.viewer(viewerRef.current.id, {
             type: "equirectangular",
-            panorama: processImageUrl(
-              isHDMode
-                ? selectedImage.properties.imageUrl_High ||
-                    selectedImage.properties.imageUrl
-                : selectedImage.properties.imageUrl_Comp ||
-                    selectedImage.properties.imageUrl
-            ),
+            panorama: processImageUrl(imageUrl),
             autoLoad: true,
             showControls: true,
             compass: selectedImage.properties.showCompass || true,
@@ -268,18 +274,22 @@ const PannellumViewer = ({
             hotSpots: hotSpots,
             onLoad: () => {
               console.log("Pannellum onLoad callback fired");
+              setIsLoading(false); // Clear loading state when image is loaded
             },
             onError: (err) => {
               console.error("Pannellum Error:", err);
+              setIsLoading(false); // Clear loading state on error too
             },
           });
 
           setPannellumInstance(viewer);
         } catch (err) {
           console.error("Error initializing Pannellum:", err);
+          setIsLoading(false);
         }
       } else {
         console.error("Pannellum not available on window object");
+        setIsLoading(false);
       }
     }, 50); // Small delay to ensure DOM is ready
 
@@ -383,15 +393,24 @@ const PannellumViewer = ({
       {/* Pannellum viewer container with dynamic ID */}
       <div id={viewerId.current} ref={viewerRef} className='w-full h-full' />
 
+      {/* Loading Overlay */}
+      {isLoading && (
+        <div className='absolute inset-0 bg-black/50 flex items-center justify-center z-50'>
+          <div className='animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500'></div>
+        </div>
+      )}
+
       {/* Fixed Navigation Controls - Only shown when showControls is true */}
       {pannellumInstance && selectedImage && showControls && (
         <>
           <div className='fixed-nav-controls'>
             <div className='vertical-nav-buttons'>
-              {images.findIndex(
-                (img) => img.properties.id === selectedImage?.properties.id
-              ) <
-                images.length - 1 && (
+              {/* Always show Next button for direct image URLs, or check array position for normal images */}
+              {(selectedImage.properties.imageUrl_Comp ||
+                images.findIndex(
+                  (img) => img.properties.id === selectedImage?.properties.id
+                ) <
+                  images.length - 1) && (
                 <button
                   className='nav-btn next-btn'
                   onClick={() => {
@@ -408,16 +427,20 @@ const PannellumViewer = ({
                       width='24px'
                       viewBox='0 0 330 330'
                     >
-                      <path d='M325.606,229.393l-150.004-150C172.79,76.58,168.974,75,164.996,75c-3.979,0-7.794,1.581-10.607,4.394 l-149.996,150c-5.858,5.858-5.858,15.355,0,21.213c5.857,5.857,15.355,5.858,21.213,0l139.39-139.393l139.397,139.393 C307.322,253.536,311.161,255,315,255c3.839,0,7.678-1.464,10.607-4.394C331.464,244.748,331.464,235.251,325.606,229.393z' />
+                      <path d='M325.606,229.393l-150.004-150C172.79,76.58,168.974,75,164.996,75c-3.979,0-7.794,1.581-10.607,4.394 l-149.996,150c-5.858,5.858,-5.858,15.355,0,21.213c5.857,5.857,15.355,5.858,21.213,0l139.39-139.393l139.397,139.393 C307.322,253.536,311.161,255,315,255c3.839,0,7.678-1.464,10.607-4.394C331.464,244.748,331.464,235.251,325.606,229.393z' />
                     </svg>
                     <span className='nav-text'>NEXT</span>
                   </div>
                 </button>
               )}
 
-              {images.findIndex(
-                (img) => img.properties.id === selectedImage?.properties.id
-              ) > 0 && (
+              {/* Always show Prev button for direct image URLs with imageNumber > 0, or check array position for normal images */}
+              {((selectedImage.properties.imageUrl_Comp &&
+                selectedImage.properties.id &&
+                selectedImage.properties.id.match(/\d+_(\d+)/)?.[1] > 0) ||
+                images.findIndex(
+                  (img) => img.properties.id === selectedImage?.properties.id
+                ) > 0) && (
                 <button
                   className='nav-btn prev-btn'
                   onClick={() => {
@@ -434,7 +457,7 @@ const PannellumViewer = ({
                       width='24px'
                       viewBox='0 0 330 330'
                     >
-                      <path d='M325.606,229.393l-150.004-150C172.79,76.58,168.974,75,164.996,75c-3.979,0-7.794,1.581-10.607,4.394 l-149.996,150c-5.858,5.858-5.858,15.355,0,21.213c5.857,5.857,15.355,5.858,21.213,0l139.39-139.393l139.397,139.393 C307.322,253.536,311.161,255,315,255c3.839,0,7.678-1.464,10.607-4.394C331.464,244.748,331.464,235.251,325.606,229.393z' />
+                      <path d='M325.606,229.393l-150.004-150C172.79,76.58,168.974,75,164.996,75c-3.979,0-7.794,1.581-10.607,4.394 l-149.996,150c-5.858,5.858,-5.858,15.355,0,21.213c5.857,5.857,15.355,5.858,21.213,0l139.39-139.393l139.397,139.393 C307.322,253.536,311.161,255,315,255c3.839,0,7.678-1.464,10.607-4.394C331.464,244.748,331.464,235.251,325.606,229.393z' />
                     </svg>
                     <span className='nav-text'>PREV</span>
                   </div>
@@ -443,14 +466,47 @@ const PannellumViewer = ({
             </div>
           </div>
 
-          {/* HD Toggle Button - Separate from navigation controls */}
-          <div className='hd-toggle-container'>
+          {/* HD Toggle Button - Improved styling */}
+          <div className='absolute bottom-4 right-4 z-10'>
             <button
-              className={`hd-toggle-btn ${isHDMode ? "active" : ""}`}
+              className={`px-4 py-2 rounded-lg shadow-lg transition-all duration-300 ${
+                isHDMode
+                  ? "bg-blue-600 text-white font-bold"
+                  : "bg-gray-700 text-gray-200 hover:bg-blue-500"
+              }`}
               onClick={toggleHDMode}
               aria-label='Toggle HD mode'
+              disabled={isLoading}
             >
-              {isHDMode ? "HD" : "HD"}
+              {isLoading ? (
+                <span className='flex items-center'>
+                  <svg
+                    className='animate-spin -ml-1 mr-2 h-4 w-4 text-white'
+                    xmlns='http://www.w3.org/2000/svg'
+                    fill='none'
+                    viewBox='0 0 24 24'
+                  >
+                    <circle
+                      className='opacity-25'
+                      cx='12'
+                      cy='12'
+                      r='10'
+                      stroke='currentColor'
+                      strokeWidth='4'
+                    ></circle>
+                    <path
+                      className='opacity-75'
+                      fill='currentColor'
+                      d='M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z'
+                    ></path>
+                  </svg>
+                  Loading
+                </span>
+              ) : isHDMode ? (
+                "View Standard"
+              ) : (
+                "View HD"
+              )}
             </button>
           </div>
         </>
