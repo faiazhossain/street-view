@@ -64,6 +64,62 @@ const MapComponent = ({
     features: [],
   });
 
+  // State to store track groups
+  const [trackGroups, setTrackGroups] = useState({});
+
+  // Generate different colors for different tracks
+  const getTrackColor = () => {
+    // Return a beautiful blue gradient color
+    return "rgba(0, 128, 255, 0.8)";
+  };
+
+  // Helper function to get coordinates based on toggle state
+  const getCoordinates = (feature) => {
+    if (!feature?.properties) return [0, 0];
+
+    // Use snapped coordinates if available and toggle is on
+    if (
+      useSnappedCoordinates &&
+      feature.properties.longitude_snapped !== undefined &&
+      feature.properties.latitude_snapped !== undefined
+    ) {
+      return [
+        feature.properties.longitude_snapped,
+        feature.properties.latitude_snapped,
+      ];
+    }
+
+    // Fall back to original coordinates
+    return feature.geometry.coordinates;
+  };
+
+  // Create feature collection with appropriate coordinates based on toggle
+  const getPointsFeatureCollection = (features) => {
+    return {
+      type: "FeatureCollection",
+      features: features.map((feature) => {
+        // Make a deep copy to avoid mutating the original
+        const newFeature = JSON.parse(JSON.stringify(feature));
+
+        // Update coordinates based on toggle selection
+        newFeature.geometry.coordinates = getCoordinates(feature);
+
+        return newFeature;
+      }),
+    };
+  };
+
+  // Get all layer IDs for interactive layers - including the new mbtiles layer
+  const interactiveLayerIds = [
+    "Images", // Add the vector tile layer as interactive
+    ...Object.keys(trackGroups).flatMap((trackName) => [
+      `${trackName}-points`,
+      `${trackName}-clusters`,
+      `${trackName}-cluster-count`,
+      `${trackName}-path-line`,
+    ]),
+  ];
+
   // Function to toggle between coordinate types
   const toggleCoordinateType = () => {
     setUseSnappedCoordinates((prev) => !prev);
@@ -302,206 +358,136 @@ const MapComponent = ({
     }
   }, [selectedImageId, displayData, useSnappedCoordinates]);
 
-  // State to store track groups
-  const [trackGroups, setTrackGroups] = useState({});
-
-  // Generate different colors for different tracks
-  const getTrackColor = () => {
-    // Return a beautiful blue gradient color
-    return "rgba(0, 128, 255, 0.8)";
-  };
-
-  // Helper function to get coordinates based on toggle state
-  const getCoordinates = (feature) => {
-    if (!feature?.properties) return [0, 0];
-
-    // Use snapped coordinates if available and toggle is on
-    if (
-      useSnappedCoordinates &&
-      feature.properties.longitude_snapped !== undefined &&
-      feature.properties.latitude_snapped !== undefined
-    ) {
-      return [
-        feature.properties.longitude_snapped,
-        feature.properties.latitude_snapped,
-      ];
-    }
-
-    // Fall back to original coordinates
-    return feature.geometry.coordinates;
-  };
-
-  // Create feature collection with appropriate coordinates based on toggle
-  const getPointsFeatureCollection = (features) => {
-    return {
-      type: "FeatureCollection",
-      features: features.map((feature) => {
-        // Make a deep copy to avoid mutating the original
-        const newFeature = JSON.parse(JSON.stringify(feature));
-
-        // Update coordinates based on toggle selection
-        newFeature.geometry.coordinates = getCoordinates(feature);
-
-        return newFeature;
-      }),
-    };
-  };
-
   const onMapClick = useCallback(
     (event) => {
-      // Get features at click point
-      const features = event.features || [];
+      // Get the map instance from the event
+      const map = event.target;
 
-      if (features.length > 0) {
-        const feature = features[0];
-        const featureId = feature.layer.id;
-        const featureProps = feature.properties;
+      try {
+        // Use queryRenderedFeatures to get all features at the click point
+        // Only query the Images layer and any track-specific layers that actually exist
+        const features = map.queryRenderedFeatures(event.point);
 
-        // Check if user clicked on all-points layer
-        if (featureId === "all-points") {
-          if (feature.properties && feature.properties.id) {
+        if (features.length > 0) {
+          const feature = features[0];
+          const featureId = feature.layer.id;
+          const featureProps = feature.properties;
+
+          console.log("Feature clicked:", featureId, feature.properties);
+
+          // Check if user clicked on vector tile layer point (from thirdEye source)
+          if (featureId === "Images") {
+            if (feature.properties && feature.properties.id) {
+              console.log("Vector tile point clicked:", feature.properties);
+
+              // Update viewport to center on clicked point
+              const [lng, lat] = feature.geometry.coordinates;
+              setViewState((prev) => ({
+                ...prev,
+                longitude: lng,
+                latitude: lat,
+                // Keep current zoom level
+                transitionDuration: 500, // smooth animation in ms
+              }));
+
+              onImageSelect(feature.properties.id);
+            }
+            return;
+          }
+
+          // Handle clicks on track-specific points and paths - if they exist
+          // Check if the user clicked on a cluster
+          if (
+            featureId &&
+            (featureId.endsWith("-clusters") ||
+              featureId.endsWith("-cluster-count"))
+          ) {
+            // Get the cluster source
+            const trackName = featureId.split("-")[0];
+            const source = map.getSource(`${trackName}-points-source`);
+
+            if (source) {
+              // Zoom in on cluster when clicked
+              const clusterId = featureProps.cluster_id;
+              source.getClusterExpansionZoom(clusterId, (err, zoom) => {
+                if (err) return;
+
+                // Zoom in to the cluster
+                map.easeTo({
+                  center: feature.geometry.coordinates,
+                  zoom: zoom + 0.5, // Add a bit of extra zoom for better visibility
+                  duration: 500,
+                });
+              });
+            }
+          }
+          // Handle clicks on individual unclustered points
+          else if (
+            featureId &&
+            featureId.endsWith("-points") &&
+            feature.properties &&
+            feature.properties.id
+          ) {
             // Update viewport to center on clicked point
             const [lng, lat] = feature.geometry.coordinates;
             setViewState((prev) => ({
               ...prev,
               longitude: lng,
               latitude: lat,
-              // Keep current zoom level
               transitionDuration: 500, // smooth animation in ms
             }));
 
             onImageSelect(feature.properties.id);
           }
-          return;
-        }
+          // Handle clicks on path lines
+          else if (featureId && featureId.endsWith("-path-line")) {
+            const trackName = featureId.replace("-path-line", "");
+            const trackFeatures = trackGroups[trackName]?.features;
 
-        // Check if user clicked on all-points-line layer (when zoomed out)
-        if (featureId === "all-points-line") {
-          const clickPoint = [event.lngLat.lng, event.lngLat.lat];
+            if (trackFeatures && trackFeatures.length > 0) {
+              // Get click coordinates
+              const clickPoint = [event.lngLat.lng, event.lngLat.lat];
 
-          // Find the closest point in the pointsGeoJSON
-          let closestFeature = null;
-          let minDistance = Infinity;
+              // Find the closest point in this track
+              let closestFeature = null;
+              let minDistance = Infinity;
 
-          pointsGeoJSON.features.forEach((pointFeature) => {
-            const pointCoords = pointFeature.geometry.coordinates;
-            // Calculate distance between click and point
-            const distance =
-              Math.sqrt(
-                Math.pow(clickPoint[0] - pointCoords[0], 2) +
-                  Math.pow(clickPoint[1] - pointCoords[1], 2)
-              ) || 0;
+              trackFeatures.forEach((feature) => {
+                const [lon, lat] = getCoordinates(feature);
+                // Simple Euclidean distance - sufficient for small distances
+                const distance =
+                  Math.sqrt(
+                    Math.pow(clickPoint[0] - lon, 2) +
+                      Math.pow(clickPoint[1] - lat, 2)
+                  ) || 0;
 
-            if (distance < minDistance) {
-              minDistance = distance;
-              closestFeature = pointFeature;
-            }
-          });
+                if (distance < minDistance) {
+                  minDistance = distance;
+                  closestFeature = feature;
+                }
+              });
 
-          if (closestFeature && closestFeature.properties.id) {
-            // Update viewport to center on closest point
-            const [lng, lat] = closestFeature.geometry.coordinates;
-            setViewState((prev) => ({
-              ...prev,
-              longitude: lng,
-              latitude: lat,
-              // Keep current zoom level
-              transitionDuration: 500, // smooth animation in ms
-            }));
+              // Select the closest image
+              if (closestFeature) {
+                // Update viewport to center on closest feature
+                const [lon, lat] = getCoordinates(closestFeature);
+                setViewState((prev) => ({
+                  ...prev,
+                  longitude: lon,
+                  latitude: lat,
+                  transitionDuration: 500, // smooth animation in ms
+                }));
 
-            onImageSelect(closestFeature.properties.id);
-          }
-          return;
-        }
-
-        // Check if the user clicked on a cluster
-        if (
-          featureId &&
-          (featureId.endsWith("-clusters") ||
-            featureId.endsWith("-cluster-count"))
-        ) {
-          // Get the cluster source
-          const trackName = featureId.split("-")[0];
-          const mapInstance = event.target;
-          const source = mapInstance.getSource(`${trackName}-points-source`);
-
-          // Zoom in on cluster when clicked
-          const clusterId = featureProps.cluster_id;
-          source.getClusterExpansionZoom(clusterId, (err, zoom) => {
-            if (err) return;
-
-            // Zoom in to the cluster
-            mapInstance.easeTo({
-              center: feature.geometry.coordinates,
-              zoom: zoom + 0.5, // Add a bit of extra zoom for better visibility
-              duration: 500,
-            });
-          });
-        }
-        // Handle clicks on individual unclustered points
-        else if (
-          featureId &&
-          featureId.endsWith("-points") &&
-          feature.properties &&
-          feature.properties.id
-        ) {
-          // Update viewport to center on clicked point
-          const [lng, lat] = feature.geometry.coordinates;
-          setViewState((prev) => ({
-            ...prev,
-            longitude: lng,
-            latitude: lat,
-            transitionDuration: 500, // smooth animation in ms
-          }));
-
-          onImageSelect(feature.properties.id);
-        }
-        // Handle clicks on path lines
-        else if (featureId && featureId.endsWith("-path-line")) {
-          const trackName = featureId.replace("-path-line", "");
-          const trackFeatures = trackGroups[trackName]?.features;
-
-          if (trackFeatures && trackFeatures.length > 0) {
-            // Get click coordinates
-            const clickPoint = [event.lngLat.lng, event.lngLat.lat];
-
-            // Find the closest point in this track
-            let closestFeature = null;
-            let minDistance = Infinity;
-
-            trackFeatures.forEach((feature) => {
-              const [lon, lat] = getCoordinates(feature);
-              // Simple Euclidean distance - sufficient for small distances
-              const distance =
-                Math.sqrt(
-                  Math.pow(clickPoint[0] - lon, 2) +
-                    Math.pow(clickPoint[1] - lat, 2)
-                ) || 0;
-
-              if (distance < minDistance) {
-                minDistance = distance;
-                closestFeature = feature;
+                onImageSelect(closestFeature.properties.id);
               }
-            });
-
-            // Select the closest image
-            if (closestFeature) {
-              // Update viewport to center on closest feature
-              const [lon, lat] = getCoordinates(closestFeature);
-              setViewState((prev) => ({
-                ...prev,
-                longitude: lon,
-                latitude: lat,
-                transitionDuration: 500, // smooth animation in ms
-              }));
-
-              onImageSelect(closestFeature.properties.id);
             }
           }
         }
+      } catch (error) {
+        console.error("Error handling map click:", error);
       }
     },
-    [onImageSelect, trackGroups, pointsGeoJSON]
+    [onImageSelect, trackGroups]
   );
 
   // Handle copying coordinates to clipboard
@@ -536,18 +522,6 @@ const MapComponent = ({
     // Reset copy success state
     setCopySuccess(false);
   }, []);
-
-  // Get all layer IDs for interactive layers - including the new mbtiles layer
-  const interactiveLayerIds = [
-    "Images", // Add the vector tile layer as interactive
-    "all-points", // Add the all-points layer as interactive
-    ...Object.keys(trackGroups).flatMap((trackName) => [
-      `${trackName}-points`,
-      `${trackName}-clusters`,
-      `${trackName}-cluster-count`,
-      `${trackName}-path-line`,
-    ]),
-  ];
 
   // Handle location selection from search bar
   const handleLocationSelect = (location) => {
@@ -1062,7 +1036,7 @@ const MapComponent = ({
       {!isCompact && (
         <div className='absolute left-4 bottom-16 glass p-3 rounded-lg shadow-lg max-w-xs text-sm opacity-80 hover:opacity-100 transition-opacity duration-300'>
           <p className='font-medium'>
-            Click on any red point to view the street image at that location.
+            Click on any green point to view the street image at that location.
           </p>
         </div>
       )}
