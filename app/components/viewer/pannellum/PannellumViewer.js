@@ -26,6 +26,7 @@ const PannellumViewer = ({
   onPrevImage,
   onNextImage,
 }) => {
+  console.log("🚀 ~ PannellumViewer ~ selectedImage:", selectedImage);
   const [scriptLoaded, setScriptLoaded] = useState(scriptLoadedGlobal);
   const viewerRef = useRef(null);
   const [pannellumInstance, setPannellumInstance] = useState(null);
@@ -51,9 +52,6 @@ const PannellumViewer = ({
     if (pannellumInstance && selectedImage) {
       // Save current view position before switching
       saveCurrentViewPosition();
-
-      // Set loading state
-      setIsLoading(true);
 
       // Toggle HD mode
       setIsHDMode((prev) => !prev);
@@ -239,11 +237,29 @@ const PannellumViewer = ({
             : selectedImage.properties.initialHfov || 100;
 
           // Determine which image URL to use - preferring the _Comp and _High properties
-          const imageUrl = isHDMode
-            ? selectedImage.properties.imageUrl_High ||
-              selectedImage.properties.imageUrl
-            : selectedImage.properties.imageUrl_Comp ||
-              selectedImage.properties.imageUrl;
+          let imageUrl;
+
+          // Check if this is a direct URL image with both HD and compressed versions
+          if (
+            selectedImage.properties.imageUrl_High &&
+            selectedImage.properties.imageUrl_Comp
+          ) {
+            imageUrl = isHDMode
+              ? selectedImage.properties.imageUrl_High
+              : selectedImage.properties.imageUrl_Comp;
+
+            console.log(
+              `Using ${isHDMode ? "HD" : "Compressed"} image:`,
+              imageUrl
+            );
+          } else {
+            // Fall back to standard imageUrl logic for backward compatibility
+            imageUrl = isHDMode
+              ? selectedImage.properties.imageUrl_High ||
+                selectedImage.properties.imageUrl
+              : selectedImage.properties.imageUrl_Comp ||
+                selectedImage.properties.imageUrl;
+          }
 
           // Log the view values for debugging only when needed
           if (process.env.NODE_ENV === "development" && false) {
