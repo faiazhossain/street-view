@@ -55,6 +55,9 @@ const MapComponent = ({
   const [showCoordsPopup, setShowCoordsPopup] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
 
+  // Vector tile source loaded state
+  const [vectorTilesLoaded, setVectorTilesLoaded] = useState(false);
+
   // Instead of hover points, we'll create a GeoJSON layer for all points
   const [pointsGeoJSON, setPointsGeoJSON] = useState({
     type: "FeatureCollection",
@@ -253,8 +256,10 @@ const MapComponent = ({
   // Initialize view state from initialViewState (if provided) or from the first feature in the data
   const [viewState, setViewState] = useState(
     initialViewState || {
-      longitude: displayData?.features?.[0]?.geometry.coordinates[0] || 0,
-      latitude: displayData?.features?.[0]?.geometry.coordinates[1] || 0,
+      longitude:
+        displayData?.features?.[0]?.geometry.coordinates[0] || 90.3938010872331,
+      latitude:
+        displayData?.features?.[0]?.geometry.coordinates[1] || 23.821600011863,
       zoom: 14,
       pitch: 0,
       bearing: 0,
@@ -532,8 +537,9 @@ const MapComponent = ({
     setCopySuccess(false);
   }, []);
 
-  // Get all layer IDs for interactive layers - including clusters and path lines
+  // Get all layer IDs for interactive layers - including the new mbtiles layer
   const interactiveLayerIds = [
+    "Images", // Add the vector tile layer as interactive
     "all-points", // Add the all-points layer as interactive
     ...Object.keys(trackGroups).flatMap((trackName) => [
       `${trackName}-points`,
@@ -564,60 +570,6 @@ const MapComponent = ({
     }
   };
 
-  // Group images by their track ID
-  // useEffect(() => {
-  //   if (!imageData.features || imageData.features.length === 0) return;
-
-  //   const groups = {};
-
-  //   // Process each image
-  //   imageData.features.forEach((feature) => {
-  //     // Get the id for track identification - try feature_id first (new format), then fall back to id (old format)
-  //     const idForTrack = feature.properties.feature_id || feature.properties.id;
-
-  //     // Determine track name:
-  //     // 1. For format like "img_track0_265" - extract "track0"
-  //     // 2. For format like "0_1" - convert to "track0"
-  //     // 3. Fallback to default
-  //     let trackName;
-
-  //     // Extract track name using regex (e.g., "track0" from "img_track0_265")
-  //     const trackMatch = idForTrack?.match(/img_([^_]+)/);
-
-  //     // New format handling for IDs like "0_1" - extract the first part as track
-  //     const newFormatMatch = idForTrack?.match(/^(\d+)_\d+$/);
-
-  //     if (trackMatch) {
-  //       trackName = trackMatch[1]; // This will be "track0", "track1", etc.
-  //     } else if (newFormatMatch) {
-  //       trackName = "track" + newFormatMatch[1]; // Convert "0_1" to "track0"
-  //     } else {
-  //       trackName = "default"; // Fallback name
-  //     }
-
-  //     // Initialize track group if first time seeing this track
-  //     if (!groups[trackName]) {
-  //       groups[trackName] = {
-  //         features: [],
-  //         color: getTrackColor(trackName), // Get a unique color for each track
-  //         path: {
-  //           type: "Feature",
-  //           properties: {},
-  //           geometry: {
-  //             type: "LineString",
-  //             coordinates: [],
-  //           },
-  //         },
-  //       };
-  //     }
-
-  //     // Add feature to track group
-  //     groups[trackName].features.push(feature);
-  //   });
-
-  //   setTrackGroups(groups);
-  // }, [imageData, darkMode]);
-
   return (
     <div className='relative rounded-xl overflow-hidden shadow-lg'>
       {/* Add Search Bar - only on full map, not in compact mode */}
@@ -638,6 +590,19 @@ const MapComponent = ({
         dragRotate={!isCompact}
         pitchWithRotate={!isCompact}
         attributionControl={false}
+        onLoad={(map) => {
+          // Check if the thirdEye source already exists to avoid duplicates
+          if (!map.target.getSource("thirdEye")) {
+            // Add the ThirdEye vector tile source
+            map.target.addSource("thirdEye", {
+              url: "https://tiles.barikoimaps.dev/data/third_eye.json",
+              type: "vector",
+            });
+
+            // Set the vector tiles as loaded
+            setVectorTilesLoaded(true);
+          }
+        }}
       >
         {/* Map Controls - Don't show in compact mode */}
         {!isCompact && (
@@ -649,6 +614,47 @@ const MapComponent = ({
               customAttribution='ThirdEye360'
             />
           </>
+        )}
+
+        {/* Add the vector tile layer from the ThirdEye source */}
+        {vectorTilesLoaded && showPoints && (
+          <Layer
+            id='Images'
+            type='circle'
+            source='thirdEye'
+            source-layer='images'
+            paint={{
+              "circle-color": "hsl(128, 74%, 50%)",
+              "circle-stroke-width": [
+                "interpolate",
+                ["linear"],
+                ["zoom"],
+                0,
+                0,
+                12,
+                0,
+                22,
+                0.1,
+              ],
+              "circle-stroke-color": "hsl(0, 0%, 0%)",
+              "circle-radius": [
+                "interpolate",
+                ["linear"],
+                ["zoom"],
+                0,
+                0,
+                8,
+                3,
+                14,
+                3,
+                18,
+                9,
+                20,
+                15,
+              ],
+            }}
+            filter={["==", ["geometry-type"], "Point"]}
+          />
         )}
 
         {/* Track-specific Layers */}
@@ -755,35 +761,6 @@ const MapComponent = ({
                 />
               );
             })}
-
-        {/* All Points - GeoJSON layer for performance */}
-        {showPoints && (
-          <Source id='all-points-source' type='geojson' data={pointsGeoJSON}>
-            <Layer
-              id='all-points'
-              type='circle'
-              paint={{
-                "circle-radius": [
-                  "interpolate",
-                  ["linear"],
-                  ["zoom"],
-                  10,
-                  3,
-                  14,
-                  5,
-                  18,
-                  8,
-                ],
-                "circle-color": darkMode ? "#ff6677" : "#ff1177",
-                "circle-stroke-width": 0.2,
-                "circle-stroke-color": darkMode ? "#ffffff" : "#ffffff",
-                "circle-opacity": 0.8,
-                // Add circle pitch alignment for 3D effect
-                "circle-pitch-alignment": "map",
-              }}
-            />
-          </Source>
-        )}
 
         {/* Track-specific points layers - also respect showPoints state */}
         {showPoints &&
