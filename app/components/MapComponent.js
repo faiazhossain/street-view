@@ -10,16 +10,10 @@ import Map, {
   Marker,
   Popup,
 } from "react-map-gl/maplibre";
-import { FaMapPin, FaCopy, FaCopyright } from "react-icons/fa";
+import { FaMapPin, FaCopy } from "react-icons/fa";
 import SelectedMarker from "./map/SelectedMarker";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useTheme } from "../context/ThemeContext";
-import { IoRefreshOutline } from "react-icons/io5";
-import {
-  loadGeoJsonFromLocal,
-  saveGeoJsonToLocal,
-  isGeoJsonStale,
-} from "../utils/localStorageUtils";
 import MapSearchBar from "./ui/MapSearchBar";
 import { FcOk } from "react-icons/fc";
 
@@ -35,7 +29,6 @@ const MapComponent = ({
 }) => {
   const { darkMode } = useTheme();
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [geoJsonData, setGeoJsonData] = useState(null); // State for the GeoJSON data from API
   const [showPoints, setShowPoints] = useState(true); // State to control points layer visibility
 
   // State for search pin location
@@ -52,12 +45,6 @@ const MapComponent = ({
 
   // Vector tile source loaded state
   const [vectorTilesLoaded, setVectorTilesLoaded] = useState(false);
-
-  // Instead of hover points, we'll create a GeoJSON layer for all points
-  const [pointsGeoJSON, setPointsGeoJSON] = useState({
-    type: "FeatureCollection",
-    features: [],
-  });
 
   // State to store track groups
   const [trackGroups, setTrackGroups] = useState({});
@@ -98,7 +85,7 @@ const MapComponent = ({
     };
   };
 
-  // Get all layer IDs for interactive layers - including the new mbtiles layer
+  // Get all layer IDs for interactive layers - including the mbtiles layer
   const interactiveLayerIds = [
     "Images", // Add the vector tile layer as interactive
     ...Object.keys(trackGroups).flatMap((trackName) => [
@@ -119,154 +106,13 @@ const MapComponent = ({
     setShowPoints((prev) => !prev);
   };
 
-  // Fetch GeoJSON data from API when component mounts or refreshData is called
-  useEffect(() => {
-    const fetchGeoJsonData = async (forceRefresh = false) => {
-      try {
-        setIsRefreshing(true);
-
-        // If we're not forcing a refresh, try to get data from local storage first
-        if (!forceRefresh) {
-          const localData = await loadGeoJsonFromLocal();
-          if (localData && !isGeoJsonStale()) {
-            setGeoJsonData(localData);
-            setIsRefreshing(false);
-            return;
-          }
-        }
-
-        // Add timestamp to prevent caching issues
-        const timestamp = new Date().getTime();
-        // Add refresh parameter if we're forcing refresh
-        const apiUrl = `/api/features?_t=${timestamp}${
-          forceRefresh ? "&refresh=true" : ""
-        }`;
-
-        const response = await fetch(apiUrl, {
-          cache: "no-store",
-          // Set longer timeout as we're handling fallbacks properly now
-          signal: AbortSignal.timeout(15000), // 15 seconds timeout
-        });
-
-        if (!response.ok) {
-          // If status is 504 (Gateway Timeout), throw a specific error
-          if (response.status === 504) {
-            throw new Error(
-              "API Gateway Timeout (504). Using cached data instead."
-            );
-          }
-          throw new Error(`Network response error: ${response.status}`);
-        }
-
-        const data = await response.json();
-
-        if (data.error) {
-          console.warn("API returned error:", data.error, data.message);
-          throw new Error(data.message || "Error in API response");
-        }
-
-        // Save data to IndexedDB/local storage
-        try {
-          await saveGeoJsonToLocal(data);
-        } catch (storageError) {
-          console.error("Failed to save GeoJSON data locally:", storageError);
-          // Continue with the data even if storage fails
-        }
-
-        setGeoJsonData(data);
-      } catch (error) {
-        console.error("Error fetching GeoJSON data:", error);
-
-        // If API fetch failed, try local storage as a fallback
-        try {
-          const localData = await loadGeoJsonFromLocal();
-          if (localData) {
-            setGeoJsonData(localData);
-
-            // Show non-blocking notification
-            if (!forceRefresh) {
-              // Only show alert if user explicitly requested a refresh
-              if (forceRefresh) {
-                alert(
-                  `Could not refresh data: ${error.message}\nUsing cached data instead.`
-                );
-              }
-            }
-          } else {
-            // Critical error - no data available
-            alert(
-              `Failed to load map data: ${error.message}\nPlease check your connection and try again.`
-            );
-          }
-        } catch (localStorageError) {
-          console.error(
-            "Failed to load from IndexedDB/local storage:",
-            localStorageError
-          );
-          alert(
-            `Failed to load map data from any source. Please check your connection and try again.`
-          );
-        }
-      } finally {
-        setIsRefreshing(false);
-      }
-    };
-
-    fetchGeoJsonData();
-
-    // Make the fetchGeoJsonData function available to the component
-    window.fetchGeoJsonData = fetchGeoJsonData;
-
-    // Set up a background refresh to check for new data periodically (every 30 minutes)
-    const backgroundRefreshInterval = 30 * 60 * 1000; // 30 minutes
-    const backgroundRefresh = setInterval(() => {
-      fetchGeoJsonData(true); // Force refresh in the background
-    }, backgroundRefreshInterval);
-
-    // Clean up the interval when component unmounts
-    return () => {
-      clearInterval(backgroundRefresh);
-    };
-  }, [refreshData]);
-
-  // Use the GeoJSON data if available, otherwise fall back to the imageData prop
-  const displayData = geoJsonData || imageData;
-
-  // Populate pointsGeoJSON whenever the display data changes
-  useEffect(() => {
-    if (displayData?.features && displayData.features.length > 0) {
-      // Create a proper GeoJSON structure for all points
-      const features = displayData.features.map((feature) => {
-        const [lon, lat] = getCoordinates(feature);
-        return {
-          type: "Feature",
-          properties: {
-            ...feature.properties,
-            id: feature.properties.id,
-          },
-          geometry: {
-            type: "Point",
-            coordinates: [lon, lat],
-          },
-        };
-      });
-
-      setPointsGeoJSON({
-        type: "FeatureCollection",
-        features,
-      });
-    }
-  }, [displayData, useSnappedCoordinates]);
-
   // Handle refresh click
   const handleRefresh = () => {
-    // Prevent starting a new refresh if already refreshing
     if (isRefreshing) return;
 
     setIsRefreshing(true);
 
     if (refreshData) {
-      // If using parent component's refresh function
       const refreshPromise = refreshData();
 
       // Handle both Promise and non-Promise return values
@@ -279,15 +125,7 @@ const MapComponent = ({
         setTimeout(() => setIsRefreshing(false), 2000);
       }
     } else {
-      // Force refresh from API with window.fetchGeoJsonData
-      // The fetchGeoJsonData function will handle setting isRefreshing to false in its finally block
-      if (window.fetchGeoJsonData) {
-        window.fetchGeoJsonData(true);
-      } else {
-        // Fallback in case fetchGeoJsonData isn't available
-        console.error("fetchGeoJsonData function not available");
-        setIsRefreshing(false);
-      }
+      setIsRefreshing(false);
     }
   };
 
@@ -302,32 +140,32 @@ const MapComponent = ({
   const [viewState, setViewState] = useState(
     initialViewState || {
       longitude:
-        displayData?.features?.[0]?.geometry.coordinates[0] || 90.3938010872331,
+        imageData?.features?.[0]?.geometry.coordinates[0] || 90.3938010872331,
       latitude:
-        displayData?.features?.[0]?.geometry.coordinates[1] || 23.821600011863,
+        imageData?.features?.[0]?.geometry.coordinates[1] || 23.821600011863,
       zoom: 14,
       pitch: 0,
       bearing: 0,
     }
   );
 
-  // Update the view state when the GeoJSON data changes
+  // Update the view state when the image data changes
   useEffect(() => {
-    if (displayData?.features && displayData.features.length > 0) {
+    if (imageData?.features && imageData.features.length > 0) {
       setViewState((prev) => ({
         ...prev,
         longitude:
-          displayData.features[0]?.geometry.coordinates[0] || prev.longitude,
+          imageData.features[0]?.geometry.coordinates[0] || prev.longitude,
         latitude:
-          displayData.features[0]?.geometry.coordinates[1] || prev.latitude,
+          imageData.features[0]?.geometry.coordinates[1] || prev.latitude,
       }));
     }
-  }, [displayData]);
+  }, [imageData]);
 
   // Fly to the selected point when selectedImageId changes
   useEffect(() => {
-    if (selectedImageId && displayData?.features) {
-      const selectedFeature = displayData.features.find(
+    if (selectedImageId && imageData?.features) {
+      const selectedFeature = imageData.features.find(
         (feature) => feature.properties.feature_id === selectedImageId
       );
 
@@ -345,7 +183,7 @@ const MapComponent = ({
         }));
       }
     }
-  }, [selectedImageId, displayData, useSnappedCoordinates]);
+  }, [selectedImageId, imageData, useSnappedCoordinates]);
 
   const onMapClick = useCallback(
     (event) => {
@@ -354,13 +192,11 @@ const MapComponent = ({
 
       try {
         // Use queryRenderedFeatures to get all features at the click point
-        // Only query the Images layer and any track-specific layers that actually exist
         const features = map.queryRenderedFeatures(event.point);
 
         if (features.length > 0) {
           const feature = features[0];
           const featureId = feature.layer.id;
-          const featureProps = feature.properties;
 
           // Check if user clicked on vector tile layer point (from thirdEye source)
           if (featureId === "Images") {
@@ -438,8 +274,6 @@ const MapComponent = ({
       // Set search pin location and show popup
       setSearchPinLocation(location);
       setShowSearchPopup(true);
-
-      // Hide popup after 3 seconds
     }
   };
 
@@ -762,7 +596,7 @@ const MapComponent = ({
       </Map>
 
       {/* Refresh button in the top-left corner */}
-      {!isCompact && (
+      {!isCompact && refreshData && (
         <div className='absolute top-28 right-1 z-10'>
           <button
             onClick={handleRefresh}
@@ -770,13 +604,20 @@ const MapComponent = ({
             className='glass p-2.5 rounded-xl shadow-md hover:shadow-lg transition-all border border-white/30 flex items-center justify-center'
             title='Refresh data'
           >
-            <IoRefreshOutline
-              className={`w-5 h-5 ${
+            <svg
+              xmlns='http://www.w3.org/2000/svg'
+              width='20'
+              height='20'
+              viewBox='0 0 24 24'
+              className={`${
                 isRefreshing || isLoading
                   ? "animate-spin text-blue-500"
                   : "text-gray-700"
               }`}
-            />
+              fill='currentColor'
+            >
+              <path d='M12 22c5.421 0 10-4.579 10-10h-2c0 4.337-3.663 8-8 8s-8-3.663-8-8c0-4.336 3.663-8 8-8V2C6.579 2 2 6.58 2 12c0 5.421 4.579 10 10 10z'></path>
+            </svg>
           </button>
         </div>
       )}

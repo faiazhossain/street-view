@@ -30,7 +30,7 @@ const parseImageId = (id) => {
 
 const ImageViewer = ({
   selectedImage,
-  images,
+  images = [], // Default to empty array
   onPrevImage,
   onNextImage,
   onClose,
