@@ -62,12 +62,6 @@ const MapComponent = ({
   // State to store track groups
   const [trackGroups, setTrackGroups] = useState({});
 
-  // Generate different colors for different tracks
-  const getTrackColor = () => {
-    // Return a beautiful blue gradient color
-    return "rgba(0, 128, 255, 0.8)";
-  };
-
   // Helper function to get coordinates based on toggle state
   const getCoordinates = (feature) => {
     if (!feature?.properties) return [0, 0];
@@ -334,7 +328,7 @@ const MapComponent = ({
   useEffect(() => {
     if (selectedImageId && displayData?.features) {
       const selectedFeature = displayData.features.find(
-        (feature) => feature.properties.id === selectedImageId
+        (feature) => feature.properties.feature_id === selectedImageId
       );
 
       if (selectedFeature) {
@@ -371,8 +365,6 @@ const MapComponent = ({
           // Check if user clicked on vector tile layer point (from thirdEye source)
           if (featureId === "Images") {
             if (feature.properties && feature.properties.id) {
-              console.log("Vector tile point clicked:", feature.properties);
-
               // Update viewport to center on clicked point
               const [lng, lat] = feature.geometry.coordinates;
               setViewState((prev) => ({
@@ -496,7 +488,6 @@ const MapComponent = ({
             />
           </>
         )}
-
         {/* Add the vector tile layer from the ThirdEye source */}
         {vectorTilesLoaded && showPoints && (
           <Layer
@@ -537,7 +528,6 @@ const MapComponent = ({
             filter={["==", ["geometry-type"], "Point"]}
           />
         )}
-
         {/* Track-specific Layers */}
         {Object.keys(trackGroups).map((trackName) => (
           <React.Fragment key={trackName}>
@@ -619,11 +609,12 @@ const MapComponent = ({
             </Source>
           </React.Fragment>
         ))}
-
         {/* Selected Image Marker */}
         {selectedImageId &&
           imageData.features
-            .filter((feature) => feature.properties.id === selectedImageId)
+            .filter(
+              (feature) => feature.properties.feature_id === selectedImageId
+            )
             .map((feature) => {
               // For selected marker, adjust coordinates based on toggle
               const markerFeature = { ...feature };
@@ -636,13 +627,12 @@ const MapComponent = ({
 
               return (
                 <SelectedMarker
-                  key={feature.properties.id}
+                  key={feature.properties.feature_id}
                   feature={markerFeature}
                   images={imageData.features}
                 />
               );
             })}
-
         {/* Track-specific points layers - also respect showPoints state */}
         {showPoints &&
           Object.keys(trackGroups).map((trackName) => (
@@ -679,7 +669,6 @@ const MapComponent = ({
               </Source>
             </React.Fragment>
           ))}
-
         {/* Popup for searched locations */}
         {searchPinLocation && (
           <Marker
@@ -695,7 +684,6 @@ const MapComponent = ({
             />
           </Marker>
         )}
-
         {showSearchPopup && searchPinLocation && (
           <Popup
             longitude={parseFloat(searchPinLocation.longitude)}
@@ -733,7 +721,6 @@ const MapComponent = ({
             </div>
           </Popup>
         )}
-
         {/* Popup for right-click coordinates */}
         {showCoordsPopup && rightClickCoords && (
           <Popup

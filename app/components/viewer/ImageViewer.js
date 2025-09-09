@@ -37,7 +37,6 @@ const ImageViewer = ({
   pathData,
   onImageSelect,
 }) => {
-  console.log("🚀 ~ ImageViewer ~ selectedImage:", selectedImage);
   const [isAutoPlaying, setIsAutoPlaying] = useState(false);
   const [showMiniMap, setShowMiniMap] = useState(true); // Default to shown
   // Add state to track the minimap center position
