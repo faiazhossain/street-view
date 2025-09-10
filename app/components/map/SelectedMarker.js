@@ -8,8 +8,9 @@ import { selectViewPosition } from "../../redux/slices/panoramaSlice";
 const SelectedMarker = ({ feature, images }) => {
   // Get the saved view position for this image from Redux
   const savedViewPosition = useSelector((state) =>
-    selectViewPosition(state, feature.properties.id)
+    selectViewPosition(state, feature.properties.feature_id)
   );
+  console.log("🚀 ~ SelectedMarker ~ savedViewPosition:", savedViewPosition);
 
   // Get the current camera yaw (default to 0 if not available)
   const cameraYaw = savedViewPosition?.yaw || 0;

@@ -26,10 +26,6 @@ const PannellumViewer = ({
   onPrevImage,
   onNextImage,
 }) => {
-  console.log(
-    "🚀 ~ PannellumViewer ~ selectedImage:",
-    selectedImage.properties
-  );
   const [scriptLoaded, setScriptLoaded] = useState(scriptLoadedGlobal);
   const viewerRef = useRef(null);
   const [pannellumInstance, setPannellumInstance] = useState(null);
@@ -40,7 +36,7 @@ const PannellumViewer = ({
   // Redux
   const dispatch = useDispatch();
   const savedViewPosition = useSelector((state) =>
-    selectViewPosition(state, selectedImage?.properties?.id)
+    selectViewPosition(state, selectedImage?.properties?.feature_id)
   );
   const showControls = useSelector(selectShowControls); // Get the UI controls visibility state
 
