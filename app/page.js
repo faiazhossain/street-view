@@ -85,7 +85,7 @@ export default function Home() {
         const nextImageData = {
           ...selectedImageData,
           id: `${trackNumber}_${nextImageNumber}`,
-          imageUrl_Comp: baseUrl + `${trackNumber}_${nextImageNumber}.jpg`,
+          imageUrl_Comp: baseUrl + `${trackNumber}_${nextImageNumber}_comp.jpg`,
           imageUrl_High: baseUrl + `${trackNumber}_${nextImageNumber}.jpg`,
           initialYaw: selectedImageData.initialYaw || 0,
           initialPitch: selectedImageData.initialPitch || 0,
