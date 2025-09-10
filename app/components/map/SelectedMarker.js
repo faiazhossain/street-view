@@ -7,13 +7,15 @@ import { selectViewPosition } from "../../redux/slices/panoramaSlice";
 
 const SelectedMarker = ({ feature, images }) => {
   // Get the saved view position for this image from Redux
+  const featureId =
+    feature.properties.feature_id || feature.properties.id || null;
   const savedViewPosition = useSelector((state) =>
-    selectViewPosition(state, feature.properties.feature_id)
+    selectViewPosition(state, featureId)
   );
-  console.log("🚀 ~ SelectedMarker ~ savedViewPosition:", savedViewPosition);
 
-  // Get the current camera yaw (default to 0 if not available)
-  const cameraYaw = savedViewPosition?.yaw || 0;
+  // Get the current camera yaw (default to initialYaw from feature or 0 if not available)
+  const cameraYaw =
+    savedViewPosition?.yaw || feature.properties.initialYaw || 0;
 
   // Helper function to extract track and image numbers from image ID
   const parseImageId = (feature) => {
@@ -100,10 +102,20 @@ const SelectedMarker = ({ feature, images }) => {
     if (!nextImage) return 0; // No next image, point north
 
     // Get current and next image coordinates
-    const currentLat = feature.geometry.coordinates[1];
-    const currentLon = feature.geometry.coordinates[0];
-    const nextLat = nextImage.geometry.coordinates[1];
-    const nextLon = nextImage.geometry.coordinates[0];
+    // Prefer using snapped coordinates if available, otherwise use geometry coordinates
+    const currentLat =
+      feature.properties.latitude_snapped || feature.geometry.coordinates[1];
+    const currentLon =
+      feature.properties.longitude_snapped || feature.geometry.coordinates[0];
+    const nextLat =
+      nextImage.properties?.latitude_snapped ||
+      nextImage.geometry?.coordinates?.[1];
+    const nextLon =
+      nextImage.properties?.longitude_snapped ||
+      nextImage.geometry?.coordinates?.[0];
+
+    // Skip calculation if we don't have valid coordinates
+    if (!currentLat || !currentLon || !nextLat || !nextLon) return 0;
 
     // Calculate bearing from current to next image
     const bearing = calculateBearing(currentLat, currentLon, nextLat, nextLon);
@@ -116,13 +128,23 @@ const SelectedMarker = ({ feature, images }) => {
     return arrowDirection;
   };
 
-  const directionRotation = calculateArrowDirection();
+  // Default to 0 if calculation fails for any reason
+  const directionRotation = calculateArrowDirection() || 0;
+
+  // Get coordinates, preferring longitude_snapped/latitude_snapped if available
+  const markerLongitude =
+    feature.properties.longitude_snapped || feature.geometry.coordinates[0];
+  const markerLatitude =
+    feature.properties.latitude_snapped || feature.geometry.coordinates[1];
+
+  // Only render if we have valid coordinates
+  if (!markerLongitude || !markerLatitude) return null;
 
   return (
     <Marker
-      key={feature.properties.id}
-      longitude={feature.geometry.coordinates[0]}
-      latitude={feature.geometry.coordinates[1]}
+      key={featureId}
+      longitude={markerLongitude}
+      latitude={markerLatitude}
       anchor='bottom'
       pitchAlignment='map'
     >

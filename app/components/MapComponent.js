@@ -35,6 +35,9 @@ const MapComponent = ({
   const [searchPinLocation, setSearchPinLocation] = useState(null);
   const [showSearchPopup, setShowSearchPopup] = useState(false);
 
+  // State to track the selected feature from vector tiles
+  const [selectedFeature, setSelectedFeature] = useState(null);
+
   // State for coordinate type toggle (snapped vs original)
   const [useSnappedCoordinates, setUseSnappedCoordinates] = useState(true);
 
@@ -162,28 +165,28 @@ const MapComponent = ({
     }
   }, [imageData]);
 
-  // Fly to the selected point when selectedImageId changes
+  // Update selectedFeature when selectedImageId changes (for marker visibility)
   useEffect(() => {
-    if (selectedImageId && imageData?.features) {
-      const selectedFeature = imageData.features.find(
-        (feature) => feature.properties.feature_id === selectedImageId
+    // If no selectedImageId, clear the selectedFeature
+    if (!selectedImageId) {
+      setSelectedFeature(null);
+      return;
+    }
+
+    // If we have a selected image ID but no existing selectedFeature, or the ID has changed
+    if (!selectedFeature || selectedFeature.properties.id !== selectedImageId) {
+      // First check if it's in the imageData.features array (old approach)
+      const foundInFeatures = imageData?.features?.find(
+        (feature) =>
+          feature.properties.feature_id === selectedImageId ||
+          feature.properties.id === selectedImageId
       );
 
-      if (selectedFeature) {
-        // Get coordinates based on toggle state (snapped or original)
-        const [lng, lat] = getCoordinates(selectedFeature);
-
-        // Smoothly fly to the selected point
-        setViewState((prev) => ({
-          ...prev,
-          longitude: lng,
-          latitude: lat,
-          transitionDuration: 500, // animation duration in ms
-          zoom: Math.max(prev.zoom, 14), // Ensure we're zoomed in enough to see points
-        }));
+      if (foundInFeatures) {
+        setSelectedFeature(foundInFeatures);
       }
     }
-  }, [selectedImageId, imageData, useSnappedCoordinates]);
+  }, [selectedImageId, imageData, selectedFeature]);
 
   const onMapClick = useCallback(
     (event) => {
@@ -211,8 +214,13 @@ const MapComponent = ({
                 transitionDuration: 500, // smooth animation in ms
               }));
 
+              // Save the selected feature for marker display
+              setSelectedFeature({
+                properties: feature.properties,
+                geometry: feature.geometry,
+              });
+
               // Pass the entire feature properties instead of just the ID
-              // This will include imageUrl_Comp and imageUrl_High if available
               onImageSelect(feature.properties);
             }
             return;
@@ -443,30 +451,55 @@ const MapComponent = ({
             </Source>
           </React.Fragment>
         ))}
-        {/* Selected Image Marker */}
-        {selectedImageId &&
-          imageData.features
-            .filter(
-              (feature) => feature.properties.feature_id === selectedImageId
-            )
-            .map((feature) => {
-              // For selected marker, adjust coordinates based on toggle
-              const markerFeature = { ...feature };
-              const [lon, lat] = getCoordinates(feature);
 
-              markerFeature.geometry = {
-                ...markerFeature.geometry,
-                coordinates: [lon, lat],
-              };
+        {/* Selected Image Marker - Now support both sources: imageData.features and selectedFeature from MBTiles click */}
+        {selectedImageId && (
+          <>
+            {/* Try to find the feature in imageData.features (old approach) */}
+            {imageData.features
+              .filter(
+                (feature) =>
+                  feature.properties.feature_id === selectedImageId ||
+                  feature.properties.id === selectedImageId
+              )
+              .map((feature) => {
+                // For selected marker, adjust coordinates based on toggle
+                const markerFeature = { ...feature };
+                const [lon, lat] = getCoordinates(feature);
 
-              return (
+                markerFeature.geometry = {
+                  ...markerFeature.geometry,
+                  coordinates: [lon, lat],
+                };
+
+                return (
+                  <SelectedMarker
+                    key={feature.properties.feature_id || feature.properties.id}
+                    feature={markerFeature}
+                    images={imageData.features}
+                  />
+                );
+              })}
+
+            {/* If we have a selectedFeature from MBTiles, render it */}
+            {selectedFeature &&
+              selectedImageId ===
+                (selectedFeature.properties.id ||
+                  selectedFeature.properties.feature_id) &&
+              !imageData.features.find(
+                (f) =>
+                  f.properties.feature_id === selectedImageId ||
+                  f.properties.id === selectedImageId
+              ) && (
                 <SelectedMarker
-                  key={feature.properties.feature_id}
-                  feature={markerFeature}
-                  images={imageData.features}
+                  key={`selected-${selectedFeature.properties.id}`}
+                  feature={selectedFeature}
+                  images={[]}
                 />
-              );
-            })}
+              )}
+          </>
+        )}
+
         {/* Track-specific points layers - also respect showPoints state */}
         {showPoints &&
           Object.keys(trackGroups).map((trackName) => (

@@ -50,115 +50,74 @@ export default function Home() {
   const handleNextImage = useCallback(() => {
     // If we have selectedImageData (direct URLs from map click), handle navigation differently
     if (selectedImageData) {
-      // Extract the current track and image number from the ID or image URL
-      let trackNumber, imageNumber;
+      // Extract the current track and image number from the ID
+      const { trackNumber, imageNumber } = parseImageId(selectedImageData.id);
 
-      if (selectedImageData.id) {
-        // If we have an ID, parse it
-        const parsed = parseImageId(selectedImageData.id);
-        trackNumber = parsed.trackNumber;
-        imageNumber = parsed.imageNumber;
-      } else if (
-        selectedImageData.imageUrl_Comp ||
-        selectedImageData.imageUrl_High
-      ) {
-        // Extract from URL pattern like "http://202.72.236.166:8001/track0/0_1.jpg"
-        const url =
-          selectedImageData.imageUrl_Comp || selectedImageData.imageUrl_High;
-        const match = url.match(/track(\d+)\/(\d+)_(\d+)/);
-        if (match) {
-          trackNumber = parseInt(match[2], 10);
-          imageNumber = parseInt(match[3], 10);
-        }
-      }
+      // Create the next image data with updated URLs and ID
+      const nextImageNumber = imageNumber + 1;
+      const nextImageId = `${trackNumber}_${nextImageNumber}`;
 
-      // If we successfully parsed the track and image numbers
-      if (trackNumber !== undefined && imageNumber !== undefined) {
-        // Create the next image data with updated URLs
-        const nextImageNumber = imageNumber + 1;
-        const baseUrl = selectedImageData.imageUrl_Comp
-          ? selectedImageData.imageUrl_Comp.split(
-              `${trackNumber}_${imageNumber}`
-            )[0]
-          : `http://202.72.236.166:8001/track${trackNumber}/`;
+      // Create the base URL based on the current track
+      const baseUrl = `http://202.72.236.166:8001/track${trackNumber}/`;
 
-        const nextImageData = {
-          ...selectedImageData,
-          id: `${trackNumber}_${nextImageNumber}`,
-          imageUrl_Comp: baseUrl + `${trackNumber}_${nextImageNumber}_comp.jpg`,
-          imageUrl_High: baseUrl + `${trackNumber}_${nextImageNumber}.jpg`,
-          initialYaw: selectedImageData.initialYaw || 0,
-          initialPitch: selectedImageData.initialPitch || 0,
-          initialHfov: selectedImageData.initialHfov || 100,
-        };
+      const nextImageData = {
+        ...selectedImageData,
+        id: nextImageId,
+        imageUrl_Comp: `${baseUrl}${trackNumber}_${nextImageNumber}_comp.jpg`,
+        imageUrl_High: `${baseUrl}${trackNumber}_${nextImageNumber}.jpg`,
+        initialYaw: selectedImageData.initialYaw || 0,
+        initialPitch: selectedImageData.initialPitch || 0,
+        initialHfov: selectedImageData.initialHfov || 100,
+        // Maintain the same coordinates or slightly offset them to simulate movement
+        longitude_snapped: selectedImageData.longitude_snapped,
+        latitude_snapped: selectedImageData.latitude_snapped,
+      };
 
-        // Update the state with the new image data
-        setSelectedImageId(nextImageData.id);
-        setSelectedImageData(nextImageData);
-      }
+      // Update the state with the new image data
+      setSelectedImageId(nextImageData.id);
+      setSelectedImageData(nextImageData);
     }
   }, [selectedImageData]);
 
   const handlePrevImage = useCallback(() => {
     // If we have selectedImageData (direct URLs from map click), handle navigation differently
     if (selectedImageData) {
-      // Extract the current track and image number from the ID or image URL
-      let trackNumber, imageNumber;
+      // Extract the current track and image number from the ID
+      const { trackNumber, imageNumber } = parseImageId(selectedImageData.id);
 
-      if (selectedImageData.id) {
-        // If we have an ID, parse it
-        const parsed = parseImageId(selectedImageData.id);
-        trackNumber = parsed.trackNumber;
-        imageNumber = parsed.imageNumber;
-      } else if (
-        selectedImageData.imageUrl_Comp ||
-        selectedImageData.imageUrl_High
-      ) {
-        // Extract from URL pattern like "http://202.72.236.166:8001/track0/0_1.jpg"
-        const url =
-          selectedImageData.imageUrl_Comp || selectedImageData.imageUrl_High;
-        const match = url.match(/track(\d+)\/(\d+)_(\d+)/);
-        if (match) {
-          trackNumber = parseInt(match[2], 10);
-          imageNumber = parseInt(match[3], 10);
-        }
-      }
+      // If we're at image 0, don't go backwards
+      if (imageNumber <= 0) return;
 
-      // If we successfully parsed the track and image numbers and not at the first image
-      if (
-        trackNumber !== undefined &&
-        imageNumber !== undefined &&
-        imageNumber > 0
-      ) {
-        // Create the previous image data with updated URLs
-        const prevImageNumber = imageNumber - 1;
-        const baseUrl = selectedImageData.imageUrl_Comp
-          ? selectedImageData.imageUrl_Comp.split(
-              `${trackNumber}_${imageNumber}`
-            )[0]
-          : `http://202.72.236.166:8001/track${trackNumber}/`;
+      // Create the previous image data with updated URLs and ID
+      const prevImageNumber = imageNumber - 1;
+      const prevImageId = `${trackNumber}_${prevImageNumber}`;
 
-        const prevImageData = {
-          ...selectedImageData,
-          id: `${trackNumber}_${prevImageNumber}`,
-          imageUrl_Comp: baseUrl + `${trackNumber}_${prevImageNumber}.jpg`,
-          imageUrl_High: baseUrl + `${trackNumber}_${prevImageNumber}.jpg`,
-          initialYaw: selectedImageData.initialYaw || 0,
-          initialPitch: selectedImageData.initialPitch || 0,
-          initialHfov: selectedImageData.initialHfov || 100,
-        };
+      // Create the base URL based on the current track
+      const baseUrl = `http://202.72.236.166:8001/track${trackNumber}/`;
 
-        // Update the state with the new image data
-        setSelectedImageId(prevImageData.id);
-        setSelectedImageData(prevImageData);
-      }
+      const prevImageData = {
+        ...selectedImageData,
+        id: prevImageId,
+        imageUrl_Comp: `${baseUrl}${trackNumber}_${prevImageNumber}_comp.jpg`,
+        imageUrl_High: `${baseUrl}${trackNumber}_${prevImageNumber}.jpg`,
+        initialYaw: selectedImageData.initialYaw || 0,
+        initialPitch: selectedImageData.initialPitch || 0,
+        initialHfov: selectedImageData.initialHfov || 100,
+        // Maintain the same coordinates or slightly offset them to simulate movement
+        longitude_snapped: selectedImageData.longitude_snapped,
+        latitude_snapped: selectedImageData.latitude_snapped,
+      };
+
+      // Update the state with the new image data
+      setSelectedImageId(prevImageData.id);
+      setSelectedImageData(prevImageData);
     }
   }, [selectedImageData]);
 
-  // Create a combined selected image object using the direct data
+  // Create a selected image object in the format expected by ImageViewer
+  // Now properly structured to work with data from MBTiles
   const selectedImage = selectedImageData
     ? {
-        // Create a feature-like object from the direct image data
         properties: selectedImageData,
         geometry: {
           coordinates: [
