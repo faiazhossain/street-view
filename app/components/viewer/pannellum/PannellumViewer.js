@@ -26,18 +26,20 @@ const PannellumViewer = ({
   onPrevImage,
   onNextImage,
 }) => {
+  console.log("🚀 ~ PannellumViewer ~ selectedImage:", selectedImage);
   const [scriptLoaded, setScriptLoaded] = useState(scriptLoadedGlobal);
   const viewerRef = useRef(null);
   const [pannellumInstance, setPannellumInstance] = useState(null);
   const viewerId = useRef(`panorama-viewer-${Date.now()}`); // Generate unique ID for each instance
   const [isHDMode, setIsHDMode] = useState(false); // Default to compressed mode for better initial performance
   const [isLoading, setIsLoading] = useState(false); // Add loading state for image transitions
-
+  // Add a debug log to check what's happening with the conditio
   // Redux
   const dispatch = useDispatch();
   const savedViewPosition = useSelector((state) =>
-    selectViewPosition(state, selectedImage?.properties?.feature_id)
+    selectViewPosition(state, selectedImage?.properties?.id)
   );
+  console.log("🚀 ~ PannellumViewer ~ savedViewPosition:", savedViewPosition);
   const showControls = useSelector(selectShowControls); // Get the UI controls visibility state
 
   // Handle script loading
@@ -259,11 +261,6 @@ const PannellumViewer = ({
             imageUrl = isHDMode
               ? selectedImage.properties.imageUrl_High
               : selectedImage.properties.imageUrl_Comp;
-
-            console.log(
-              `Using ${isHDMode ? "HD" : "Compressed"} image:`,
-              imageUrl
-            );
           } else {
             // Fall back to standard imageUrl logic for backward compatibility
             imageUrl = isHDMode
@@ -271,15 +268,6 @@ const PannellumViewer = ({
                 selectedImage.properties.imageUrl
               : selectedImage.properties.imageUrl_Comp ||
                 selectedImage.properties.imageUrl;
-          }
-
-          // Log the view values for debugging only when needed
-          if (process.env.NODE_ENV === "development" && false) {
-            // Set to true when debugging is needed
-            console.log(
-              `Initial values - Yaw: ${initialYaw}, Pitch: ${initialPitch}, HFOV: ${initialHfov}`
-            );
-            console.log(`Using image URL: ${imageUrl}`);
           }
 
           const viewer = window.pannellum.viewer(viewerRef.current.id, {
@@ -301,7 +289,6 @@ const PannellumViewer = ({
             keyboardZoom: true,
             hotSpots: hotSpots,
             onLoad: () => {
-              console.log("Pannellum onLoad callback fired");
               setIsLoading(false); // Clear loading state when image is loaded
             },
             onError: (err) => {
@@ -465,8 +452,9 @@ const PannellumViewer = ({
               {/* Always show Prev button for direct image URLs with imageNumber > 0, or check array position for normal images */}
               {((selectedImage.properties.imageUrl_Comp &&
                 selectedImage.properties.id &&
-                String(selectedImage.properties.id).match(/\d+_(\d+)/)?.[1] >
-                  0) ||
+                String(
+                  selectedImage.properties.id || selectedImage.properties.id
+                ).match(/\d+_(\d+)/)?.[1] > 0) ||
                 images.findIndex(
                   (img) => img.properties.id === selectedImage?.properties.id
                 ) > 0) && (

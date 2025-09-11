@@ -22,9 +22,9 @@ const ViewerHeader = ({ title, subtitle, onClose, selectedImage }) => {
   const displaySubtitle = () => {
     if (!selectedImage) return subtitle;
 
-    // Use feature_id (new format) or fall back to id (old format)
+    // Use id (new format) or fall back to id (old format)
     const displayId =
-      selectedImage.properties.feature_id || selectedImage.properties.id;
+      selectedImage.properties.id || selectedImage.properties.id;
 
     return `Image: ${displayId}`;
   };

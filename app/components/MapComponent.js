@@ -174,14 +174,11 @@ const MapComponent = ({
     }
 
     // If we have a selected image ID but no existing selectedFeature, or the ID has changed
-    if (
-      !selectedFeature ||
-      selectedFeature.properties.feature_id !== selectedImageId
-    ) {
+    if (!selectedFeature || selectedFeature.properties.id !== selectedImageId) {
       // First check if it's in the imageData.features array (old approach)
       const foundInFeatures = imageData?.features?.find(
         (feature) =>
-          feature.properties.feature_id === selectedImageId ||
+          feature.properties.id === selectedImageId ||
           feature.properties.id === selectedImageId
       );
 
@@ -462,7 +459,7 @@ const MapComponent = ({
             {imageData.features
               .filter(
                 (feature) =>
-                  feature.properties.feature_id === selectedImageId ||
+                  feature.properties.id === selectedImageId ||
                   feature.properties.id === selectedImageId
               )
               .map((feature) => {
@@ -477,7 +474,7 @@ const MapComponent = ({
 
                 return (
                   <SelectedMarker
-                    key={feature.properties.feature_id || feature.properties.id}
+                    key={feature.properties.id || feature.properties.id}
                     feature={markerFeature}
                     images={imageData.features}
                   />
@@ -488,10 +485,10 @@ const MapComponent = ({
             {selectedFeature &&
               selectedImageId ===
                 (selectedFeature.properties.id ||
-                  selectedFeature.properties.feature_id) &&
+                  selectedFeature.properties.id) &&
               !imageData.features.find(
                 (f) =>
-                  f.properties.feature_id === selectedImageId ||
+                  f.properties.id === selectedImageId ||
                   f.properties.id === selectedImageId
               ) && (
                 <SelectedMarker

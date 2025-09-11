@@ -28,10 +28,8 @@ export async function GET(request) {
       }
       const fileContent = await fs.readFile(localFilePath, "utf8");
       data = JSON.parse(fileContent);
-      console.log("Using cached GeoJSON data");
     } catch (err) {
       // Local cache file not found or invalid, fetching from API
-      console.log("Fetching fresh data from API");
       const response = await fetch("http://202.72.236.166:8001/api/features", {
         headers: {
           "Content-Type": "application/json",
@@ -56,7 +54,6 @@ export async function GET(request) {
           },
         };
         await fs.writeFile(localFilePath, JSON.stringify(saveData, null, 2));
-        console.log("Successfully cached GeoJSON data to:", localFilePath);
       } catch (writeError) {
         console.error("Failed to write cache file:", writeError);
         // Continue even if cache writing fails

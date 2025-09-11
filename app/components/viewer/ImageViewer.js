@@ -140,9 +140,9 @@ const ImageViewer = ({
   const getImageCaption = () => {
     if (!selectedImage) return "";
 
-    // Try to get feature_id (new format) or fallback to id (old format)
+    // Try to get id (new format) or fallback to id (old format)
     const displayId =
-      selectedImage.properties.feature_id || selectedImage.properties.id;
+      selectedImage.properties.id || selectedImage.properties.id;
 
     // Show the image ID and date if available
     let caption = `Image: ${displayId}`;
@@ -161,9 +161,9 @@ const ImageViewer = ({
     return caption;
   };
 
-  // Use feature_id if available, otherwise fall back to id
+  // Use id if available, otherwise fall back to id
   const currentFeatureId =
-    selectedImage?.properties?.feature_id || selectedImage?.properties?.id;
+    selectedImage?.properties?.id || selectedImage?.properties?.id;
 
   // Parse current track and image number
   const { trackNumber, imageNumber } = parseImageId(currentFeatureId);

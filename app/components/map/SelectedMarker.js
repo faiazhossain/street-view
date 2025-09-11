@@ -7,8 +7,7 @@ import { selectViewPosition } from "../../redux/slices/panoramaSlice";
 
 const SelectedMarker = ({ feature, images }) => {
   // Get the saved view position for this image from Redux
-  const featureId =
-    feature.properties.feature_id || feature.properties.id || null;
+  const featureId = feature.properties.id || feature.properties.id || null;
   const savedViewPosition = useSelector((state) =>
     selectViewPosition(state, featureId)
   );
@@ -19,8 +18,8 @@ const SelectedMarker = ({ feature, images }) => {
 
   // Helper function to extract track and image numbers from image ID
   const parseImageId = (feature) => {
-    // Get feature_id (new format) or fallback to id (old format)
-    const id = feature.properties.feature_id || feature.properties.id;
+    // Get id (new format) or fallback to id (old format)
+    const id = feature.properties.id || feature.properties.id;
 
     if (!id) return { trackNumber: 0, imageNumber: 0 };
 

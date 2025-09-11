@@ -77,7 +77,9 @@ export default function Home() {
     if (!selectedImageData || !selectedImageData.id) return;
 
     // Extract the current image ID to calculate next image ID
-    const { trackNumber, imageNumber } = parseImageId(selectedImageData.id);
+    const { trackNumber, imageNumber } = parseImageId(
+      selectedImageData.id || selectedImageData.id
+    );
     const nextImageNumber = imageNumber + 1;
     const nextImageId = `${trackNumber}_${nextImageNumber}`;
 
@@ -116,50 +118,61 @@ export default function Home() {
 
   const handlePrevImage = useCallback(async () => {
     // Only proceed if we have current image data
-    if (!selectedImageData || !selectedImageData.id) return;
+    if (!selectedImageData || !selectedImageData.id) {
+      return;
+    }
 
     // Extract the current image number from the ID
-    const { trackNumber, imageNumber } = parseImageId(selectedImageData.id);
-
-    // If we're at image 0, don't go backwards
-    if (imageNumber <= 0) return;
+    const { trackNumber, imageNumber } = parseImageId(
+      selectedImageData.id || selectedImageData.id
+    );
+    // If we're at image 0, don't go backwards but show some feedback
+    if (imageNumber <= 0) {
+      // Consider adding a UI notification here
+      return;
+    }
 
     // Calculate previous image ID
     const prevImageNumber = imageNumber - 1;
     const prevImageId = `${trackNumber}_${prevImageNumber}`;
 
-    // Fetch the previous image data from API
-    const prevImageData = await fetchFeatureById(prevImageId);
+    try {
+      // Fetch the previous image data from API
+      const prevImageData = await fetchFeatureById(prevImageId);
 
-    if (prevImageData) {
-      // Update state with the fetched image data
-      setSelectedImageId(prevImageId);
-      setSelectedImageData(prevImageData.properties);
-    } else {
-      // If API call failed, fall back to constructing URLs manually (as before)
-      console.warn(
-        "Falling back to manual URL construction for previous image"
-      );
+      if (prevImageData && prevImageData.properties) {
+        // Update state with the fetched image data
+        setSelectedImageId(prevImageId);
+        setSelectedImageData(prevImageData.properties);
+      } else {
+        // If API call failed, fall back to constructing URLs manually
+        console.warn(
+          "Falling back to manual URL construction for previous image"
+        );
 
-      // Create the base URL based on the current track
-      const baseUrl = `http://202.72.236.166:8001/track${trackNumber}/`;
+        // Create the base URL based on the current track
+        const baseUrl = `http://202.72.236.166:8001/track${trackNumber}/`;
 
-      const fallbackImageData = {
-        ...selectedImageData,
-        id: prevImageId,
-        imageUrl_Comp: `${baseUrl}${trackNumber}_${prevImageNumber}_comp.jpg`,
-        imageUrl_High: `${baseUrl}${trackNumber}_${prevImageNumber}.jpg`,
-        initialYaw: selectedImageData.initialYaw || 0,
-        initialPitch: selectedImageData.initialPitch || 0,
-        initialHfov: selectedImageData.initialHfov || 100,
-        // Maintain the same coordinates for navigation
-        longitude_snapped: selectedImageData.longitude_snapped,
-        latitude_snapped: selectedImageData.latitude_snapped,
-      };
+        const fallbackImageData = {
+          ...selectedImageData,
+          id: prevImageId,
+          imageUrl_Comp: `${baseUrl}${trackNumber}_${prevImageNumber}_comp.jpg`,
+          imageUrl_High: `${baseUrl}${trackNumber}_${prevImageNumber}.jpg`,
+          initialYaw: selectedImageData.initialYaw || 0,
+          initialPitch: selectedImageData.initialPitch || 0,
+          initialHfov: selectedImageData.initialHfov || 100,
+          // Maintain the same coordinates for navigation
+          longitude_snapped: selectedImageData.longitude_snapped,
+          latitude_snapped: selectedImageData.latitude_snapped,
+        };
 
-      // Update the state with the constructed image data
-      setSelectedImageId(prevImageId);
-      setSelectedImageData(fallbackImageData);
+        // Update the state with the constructed image data
+        setSelectedImageId(prevImageId);
+        setSelectedImageData(fallbackImageData);
+      }
+    } catch (error) {
+      console.error("Error navigating to previous image:", error);
+      // Don't change the current image when there's an error
     }
   }, [selectedImageData, fetchFeatureById, parseImageId]);
 

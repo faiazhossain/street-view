@@ -1,8 +1,8 @@
-'use server';
+"use server";
 
-import fs from 'fs';
-import path from 'path';
-import ExifParser from 'exif-parser';
+import fs from "fs";
+import path from "path";
+import ExifParser from "exif-parser";
 
 /**
  * Handles GPS coordinates that might be in different formats
@@ -14,19 +14,18 @@ function processCoordinates(coordinates, direction) {
   let decimal;
 
   // Check if coordinates is already a decimal number
-  if (typeof coordinates === 'number') {
+  if (typeof coordinates === "number") {
     decimal = coordinates;
   }
   // Check if it's an array (traditional DMS format)
   else if (Array.isArray(coordinates) && coordinates.length >= 3) {
     decimal = coordinates[0] + coordinates[1] / 60 + coordinates[2] / 3600;
   } else {
-    console.log('Unsupported coordinates format:', coordinates);
     return null;
   }
 
   // If the direction is South or West, we need to negate the coordinate
-  if (direction === 'S' || direction === 'W') {
+  if (direction === "S" || direction === "W") {
     decimal = -decimal;
   }
 
@@ -40,23 +39,10 @@ function processCoordinates(coordinates, direction) {
  */
 export async function extractGpsFromImage(imagePath) {
   try {
-    console.log(`Reading file: ${imagePath}`);
     const buffer = fs.readFileSync(imagePath);
-    console.log(`File size: ${buffer.length} bytes`);
 
     const parser = ExifParser.create(buffer);
     const result = parser.parse();
-
-    console.log('EXIF tags found:', Object.keys(result.tags));
-    console.log(
-      'GPS data in tags:',
-      JSON.stringify({
-        GPSLatitude: result.tags.GPSLatitude,
-        GPSLatitudeRef: result.tags.GPSLatitudeRef,
-        GPSLongitude: result.tags.GPSLongitude,
-        GPSLongitudeRef: result.tags.GPSLongitudeRef,
-      })
-    );
 
     if (!result.tags || !result.tags.GPSLatitude) {
       console.warn(`No GPS data found in image: ${imagePath}`);
@@ -72,8 +58,6 @@ export async function extractGpsFromImage(imagePath) {
       result.tags.GPSLongitude,
       result.tags.GPSLongitudeRef
     );
-
-    console.log(`Extracted coordinates: lat=${lat}, lng=${lng}`);
 
     if (lat === null || lng === null || isNaN(lat) || isNaN(lng)) {
       console.warn(`Invalid GPS data in image: ${imagePath}`);
@@ -97,7 +81,7 @@ export async function extractGpsFromDirectory(directoryPath) {
     const files = fs.readdirSync(directoryPath);
     const imageFiles = files.filter((file) => {
       const ext = path.extname(file).toLowerCase();
-      return ['.jpg', '.jpeg', '.tiff', '.tif'].includes(ext);
+      return [".jpg", ".jpeg", ".tiff", ".tif"].includes(ext);
     });
 
     const gpsData = {};
@@ -124,12 +108,12 @@ export async function extractGpsFromDirectory(directoryPath) {
  * @param {string} baseUrl - Base URL for accessing the images
  * @returns {Object} - GeoJSON feature collection
  */
-export async function generateGeoJson(gpsData, baseUrl = '/street-view/') {
+export async function generateGeoJson(gpsData, baseUrl = "/street-view/") {
   const features = Object.entries(gpsData).map(([filename, coords], index) => {
     const id = path.basename(filename, path.extname(filename));
 
     return {
-      type: 'Feature',
+      type: "Feature",
       properties: {
         id,
         imageUrl: `${baseUrl}${filename}`,
@@ -139,14 +123,14 @@ export async function generateGeoJson(gpsData, baseUrl = '/street-view/') {
         showCompass: true,
       },
       geometry: {
-        type: 'Point',
+        type: "Point",
         coordinates: [coords.lng, coords.lat], // GeoJSON uses [longitude, latitude] order
       },
     };
   });
 
   return {
-    type: 'FeatureCollection',
+    type: "FeatureCollection",
     features,
   };
 }
