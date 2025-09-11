@@ -465,7 +465,8 @@ const PannellumViewer = ({
               {/* Always show Prev button for direct image URLs with imageNumber > 0, or check array position for normal images */}
               {((selectedImage.properties.imageUrl_Comp &&
                 selectedImage.properties.id &&
-                selectedImage.properties.id.match(/\d+_(\d+)/)?.[1] > 0) ||
+                String(selectedImage.properties.id).match(/\d+_(\d+)/)?.[1] >
+                  0) ||
                 images.findIndex(
                   (img) => img.properties.id === selectedImage?.properties.id
                 ) > 0) && (

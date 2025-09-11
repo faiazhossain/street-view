@@ -10,6 +10,7 @@ export default function Home() {
   const [selectedImageId, setSelectedImageId] = useState(null);
   const [selectedImageData, setSelectedImageData] = useState(null);
   const [showViewer, setShowViewer] = useState(false);
+  const [isLoadingFeature, setIsLoadingFeature] = useState(false);
   const { isLoading, error, refreshData } = useImageData();
 
   // Helper function to extract track and image numbers from image ID
@@ -29,6 +30,30 @@ export default function Home() {
     return { trackNumber: 0, imageNumber: 0 };
   };
 
+  // Function to fetch feature by ID from API
+  const fetchFeatureById = useCallback(async (featureId) => {
+    if (!featureId) return null;
+
+    setIsLoadingFeature(true);
+    try {
+      const response = await fetch(
+        `http://202.72.236.166:8001/api/features/${featureId}`
+      );
+
+      if (!response.ok) {
+        throw new Error(`API response error: ${response.status}`);
+      }
+
+      const featureData = await response.json();
+      return featureData;
+    } catch (error) {
+      console.error(`Failed to fetch feature ${featureId}:`, error);
+      return null;
+    } finally {
+      setIsLoadingFeature(false);
+    }
+  }, []);
+
   const handleImageSelect = useCallback((imageData) => {
     // Check if imageData is a string (old behavior - just ID) or an object (new behavior - full properties)
     if (typeof imageData === "string" || typeof imageData === "number") {
@@ -47,20 +72,30 @@ export default function Home() {
     setShowViewer(false);
   }, []);
 
-  const handleNextImage = useCallback(() => {
-    // If we have selectedImageData (direct URLs from map click), handle navigation differently
-    if (selectedImageData) {
-      // Extract the current track and image number from the ID
-      const { trackNumber, imageNumber } = parseImageId(selectedImageData.id);
+  const handleNextImage = useCallback(async () => {
+    // Only proceed if we have current image data
+    if (!selectedImageData || !selectedImageData.id) return;
 
-      // Create the next image data with updated URLs and ID
-      const nextImageNumber = imageNumber + 1;
-      const nextImageId = `${trackNumber}_${nextImageNumber}`;
+    // Extract the current image ID to calculate next image ID
+    const { trackNumber, imageNumber } = parseImageId(selectedImageData.id);
+    const nextImageNumber = imageNumber + 1;
+    const nextImageId = `${trackNumber}_${nextImageNumber}`;
+
+    // Fetch the next image data from API
+    const nextImageData = await fetchFeatureById(nextImageId);
+
+    if (nextImageData) {
+      // Update state with the fetched image data
+      setSelectedImageId(nextImageId);
+      setSelectedImageData(nextImageData.properties);
+    } else {
+      // If API call failed, fall back to constructing URLs manually (as before)
+      console.warn("Falling back to manual URL construction for next image");
 
       // Create the base URL based on the current track
       const baseUrl = `http://202.72.236.166:8001/track${trackNumber}/`;
 
-      const nextImageData = {
+      const fallbackImageData = {
         ...selectedImageData,
         id: nextImageId,
         imageUrl_Comp: `${baseUrl}${trackNumber}_${nextImageNumber}_comp.jpg`,
@@ -68,34 +103,48 @@ export default function Home() {
         initialYaw: selectedImageData.initialYaw || 0,
         initialPitch: selectedImageData.initialPitch || 0,
         initialHfov: selectedImageData.initialHfov || 100,
-        // Maintain the same coordinates or slightly offset them to simulate movement
+        // Maintain the same coordinates for navigation
         longitude_snapped: selectedImageData.longitude_snapped,
         latitude_snapped: selectedImageData.latitude_snapped,
       };
 
-      // Update the state with the new image data
-      setSelectedImageId(nextImageData.id);
-      setSelectedImageData(nextImageData);
+      // Update the state with the constructed image data
+      setSelectedImageId(nextImageId);
+      setSelectedImageData(fallbackImageData);
     }
-  }, [selectedImageData]);
+  }, [selectedImageData, fetchFeatureById, parseImageId]);
 
-  const handlePrevImage = useCallback(() => {
-    // If we have selectedImageData (direct URLs from map click), handle navigation differently
-    if (selectedImageData) {
-      // Extract the current track and image number from the ID
-      const { trackNumber, imageNumber } = parseImageId(selectedImageData.id);
+  const handlePrevImage = useCallback(async () => {
+    // Only proceed if we have current image data
+    if (!selectedImageData || !selectedImageData.id) return;
 
-      // If we're at image 0, don't go backwards
-      if (imageNumber <= 0) return;
+    // Extract the current image number from the ID
+    const { trackNumber, imageNumber } = parseImageId(selectedImageData.id);
 
-      // Create the previous image data with updated URLs and ID
-      const prevImageNumber = imageNumber - 1;
-      const prevImageId = `${trackNumber}_${prevImageNumber}`;
+    // If we're at image 0, don't go backwards
+    if (imageNumber <= 0) return;
+
+    // Calculate previous image ID
+    const prevImageNumber = imageNumber - 1;
+    const prevImageId = `${trackNumber}_${prevImageNumber}`;
+
+    // Fetch the previous image data from API
+    const prevImageData = await fetchFeatureById(prevImageId);
+
+    if (prevImageData) {
+      // Update state with the fetched image data
+      setSelectedImageId(prevImageId);
+      setSelectedImageData(prevImageData.properties);
+    } else {
+      // If API call failed, fall back to constructing URLs manually (as before)
+      console.warn(
+        "Falling back to manual URL construction for previous image"
+      );
 
       // Create the base URL based on the current track
       const baseUrl = `http://202.72.236.166:8001/track${trackNumber}/`;
 
-      const prevImageData = {
+      const fallbackImageData = {
         ...selectedImageData,
         id: prevImageId,
         imageUrl_Comp: `${baseUrl}${trackNumber}_${prevImageNumber}_comp.jpg`,
@@ -103,26 +152,30 @@ export default function Home() {
         initialYaw: selectedImageData.initialYaw || 0,
         initialPitch: selectedImageData.initialPitch || 0,
         initialHfov: selectedImageData.initialHfov || 100,
-        // Maintain the same coordinates or slightly offset them to simulate movement
+        // Maintain the same coordinates for navigation
         longitude_snapped: selectedImageData.longitude_snapped,
         latitude_snapped: selectedImageData.latitude_snapped,
       };
 
-      // Update the state with the new image data
-      setSelectedImageId(prevImageData.id);
-      setSelectedImageData(prevImageData);
+      // Update the state with the constructed image data
+      setSelectedImageId(prevImageId);
+      setSelectedImageData(fallbackImageData);
     }
-  }, [selectedImageData]);
+  }, [selectedImageData, fetchFeatureById, parseImageId]);
 
   // Create a selected image object in the format expected by ImageViewer
-  // Now properly structured to work with data from MBTiles
+  // Now structured to work with both MBTiles data and API responses
   const selectedImage = selectedImageData
     ? {
         properties: selectedImageData,
         geometry: {
           coordinates: [
-            selectedImageData.longitude_snapped || 0,
-            selectedImageData.latitude_snapped || 0,
+            selectedImageData.longitude_original ||
+              selectedImageData.longitude_snapped ||
+              0,
+            selectedImageData.latitude_original ||
+              selectedImageData.latitude_snapped ||
+              0,
           ],
         },
       }
@@ -158,6 +211,7 @@ export default function Home() {
         <MapComponent
           imageData={{ features: [] }} // Empty features - data comes from MBTiles
           selectedImageId={selectedImageId}
+          selectedImageData={selectedImageData} // Pass selectedImageData to MapComponent
           onImageSelect={handleImageSelect}
           refreshData={refreshData}
           isLoading={isLoading}
@@ -172,6 +226,7 @@ export default function Home() {
           onNextImage={handleNextImage}
           onClose={handleCloseViewer}
           onImageSelect={handleImageSelect}
+          isLoadingFeature={isLoadingFeature}
         />
       )}
     </PageLayout>

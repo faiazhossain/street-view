@@ -36,6 +36,7 @@ const ImageViewer = ({
   onClose,
   pathData,
   onImageSelect,
+  isLoadingFeature = false, // Add prop to indicate API loading state
 }) => {
   const [isAutoPlaying, setIsAutoPlaying] = useState(false);
   const [showMiniMap, setShowMiniMap] = useState(true); // Default to shown
@@ -58,30 +59,6 @@ const ImageViewer = ({
   const toggleMiniMap = () => {
     setShowMiniMap((prev) => !prev);
   };
-
-  // // Format date for display
-  // const formatDate = (dateString) => {
-  //   if (!dateString) return "N/A";
-  //   const date = new Date(dateString);
-  //   return new Intl.DateTimeFormat("en-US", {
-  //     year: "numeric",
-  //     month: "long",
-  //     day: "numeric",
-  //     hour: "2-digit",
-  //     minute: "2-digit",
-  //   }).format(date);
-  // };
-
-  // // Format date in a more compact way for the floating info
-  // const formatCompactDate = (dateString) => {
-  //   if (!dateString) return "N/A";
-  //   const date = new Date(dateString);
-  //   return new Intl.DateTimeFormat("en-US", {
-  //     year: "numeric",
-  //     month: "short",
-  //     day: "numeric",
-  //   }).format(date);
-  // };
 
   // Start or stop the auto-play timer based on isAutoPlaying state
   useEffect(() => {
@@ -213,7 +190,20 @@ const ImageViewer = ({
             onPrevImage={onPrevImage}
             onNextImage={onNextImage}
             showControls={showControls}
+            isLoading={isLoadingFeature}
           />
+
+          {/* Loading overlay - Only show when fetching next/prev image */}
+          {isLoadingFeature && (
+            <div className='absolute inset-0 bg-black/30 flex items-center justify-center z-50 backdrop-blur-sm'>
+              <div className='bg-black/60 p-6 rounded-xl flex flex-col items-center space-y-3'>
+                <div className='animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500'></div>
+                <div className='text-white text-sm font-medium'>
+                  Loading image...
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Mini Map in bottom-left corner with toggle button inside the top-right of map */}
           {showMiniMap && showControls && (

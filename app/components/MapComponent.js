@@ -174,7 +174,10 @@ const MapComponent = ({
     }
 
     // If we have a selected image ID but no existing selectedFeature, or the ID has changed
-    if (!selectedFeature || selectedFeature.properties.id !== selectedImageId) {
+    if (
+      !selectedFeature ||
+      selectedFeature.properties.feature_id !== selectedImageId
+    ) {
       // First check if it's in the imageData.features array (old approach)
       const foundInFeatures = imageData?.features?.find(
         (feature) =>
