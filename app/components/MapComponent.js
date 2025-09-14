@@ -197,7 +197,12 @@ const MapComponent = ({
       selectedImage.properties.id
     ) {
       // Update the selectedFeature with the latest selectedImage data
-      setSelectedFeature(selectedImage);
+      // Create a new object to ensure React detects the change
+      setSelectedFeature({
+        ...selectedImage,
+        properties: { ...selectedImage.properties },
+        geometry: { ...selectedImage.geometry },
+      });
     }
   }, [selectedImage]);
 
@@ -468,7 +473,7 @@ const MapComponent = ({
         {/* Selected Image Marker - Now support both sources: imageData.features and selectedFeature from MBTiles click */}
         {selectedImageId && (
           <>
-            {/* Try to find the feature in imageData.features (old approach) */}
+            {/* Try to find the feature in imageData.features */}
             {imageData.features
               .filter(
                 (feature) =>
@@ -489,6 +494,7 @@ const MapComponent = ({
                   <SelectedMarker
                     key={feature.properties.id}
                     feature={markerFeature}
+                    isCompact={isCompact}
                   />
                 );
               })}
@@ -506,6 +512,7 @@ const MapComponent = ({
                 <SelectedMarker
                   key={`selected-${selectedFeature.properties.id}`}
                   feature={selectedFeature}
+                  isCompact={isCompact}
                 />
               )}
           </>

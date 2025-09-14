@@ -136,43 +136,38 @@ export default function Home() {
     const prevImageNumber = imageNumber - 1;
     const prevImageId = `${trackNumber}_${prevImageNumber}`;
 
-    try {
-      // Fetch the previous image data from API
-      const prevImageData = await fetchFeatureById(prevImageId);
+    // Fetch the previous image data from API
+    const prevImageData = await fetchFeatureById(prevImageId);
 
-      if (prevImageData && prevImageData.properties) {
-        // Update state with the fetched image data
-        setSelectedImageId(prevImageId);
-        setSelectedImageData(prevImageData.properties);
-      } else {
-        // If API call failed, fall back to constructing URLs manually
-        console.warn(
-          "Falling back to manual URL construction for previous image"
-        );
+    if (prevImageData) {
+      // Update state with the fetched image data
+      setSelectedImageId(prevImageId);
+      setSelectedImageData(prevImageData.properties);
+    } else {
+      // If API call failed, fall back to constructing URLs manually
+      console.warn(
+        "Falling back to manual URL construction for previous image"
+      );
 
-        // Create the base URL based on the current track
-        const baseUrl = `http://202.72.236.166:8001/track${trackNumber}/`;
+      // Create the base URL based on the current track
+      const baseUrl = `http://202.72.236.166:8001/track${trackNumber}/`;
 
-        const fallbackImageData = {
-          ...selectedImageData,
-          id: prevImageId,
-          imageUrl_Comp: `${baseUrl}${trackNumber}_${prevImageNumber}_comp.jpg`,
-          imageUrl_High: `${baseUrl}${trackNumber}_${prevImageNumber}.jpg`,
-          initialYaw: selectedImageData.initialYaw || 0,
-          initialPitch: selectedImageData.initialPitch || 0,
-          initialHfov: selectedImageData.initialHfov || 100,
-          // Maintain the same coordinates for navigation
-          longitude_snapped: selectedImageData.longitude_snapped,
-          latitude_snapped: selectedImageData.latitude_snapped,
-        };
+      const fallbackImageData = {
+        ...selectedImageData,
+        id: prevImageId,
+        imageUrl_Comp: `${baseUrl}${trackNumber}_${prevImageNumber}_comp.jpg`,
+        imageUrl_High: `${baseUrl}${trackNumber}_${prevImageNumber}.jpg`,
+        initialYaw: selectedImageData.initialYaw || 0,
+        initialPitch: selectedImageData.initialPitch || 0,
+        initialHfov: selectedImageData.initialHfov || 100,
+        // Maintain the same coordinates for navigation
+        longitude_snapped: selectedImageData.longitude_snapped,
+        latitude_snapped: selectedImageData.latitude_snapped,
+      };
 
-        // Update the state with the constructed image data
-        setSelectedImageId(prevImageId);
-        setSelectedImageData(fallbackImageData);
-      }
-    } catch (error) {
-      console.error("Error navigating to previous image:", error);
-      // Don't change the current image when there's an error
+      // Update the state with the constructed image data
+      setSelectedImageId(prevImageId);
+      setSelectedImageData(fallbackImageData);
     }
   }, [selectedImageData, fetchFeatureById, parseImageId]);
 
@@ -182,14 +177,16 @@ export default function Home() {
     ? {
         properties: selectedImageData,
         geometry: {
-          coordinates: [
-            selectedImageData.longitude_original ||
-              selectedImageData.longitude_snapped ||
+          // Use the API response geometry if available, otherwise construct from properties
+          coordinates: selectedImageData.geometry?.coordinates || [
+            selectedImageData.longitude_snapped ||
+              selectedImageData.longitude_original ||
               0,
-            selectedImageData.latitude_original ||
-              selectedImageData.latitude_snapped ||
+            selectedImageData.latitude_snapped ||
+              selectedImageData.latitude_original ||
               0,
           ],
+          type: "Point",
         },
       }
     : null;

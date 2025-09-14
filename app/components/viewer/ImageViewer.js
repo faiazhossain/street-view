@@ -215,6 +215,7 @@ const ImageViewer = ({
                 onImageSelect={onImageSelect}
                 isCompact={true}
                 initialViewState={miniMapViewState} // Pass our custom view state to center on selected point
+                selectedImage={selectedImage} // Pass the entire selected image object
               />
               <button
                 onClick={toggleMiniMap}
