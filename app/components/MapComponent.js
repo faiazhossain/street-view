@@ -10,12 +10,15 @@ import Map, {
   Marker,
   Popup,
 } from "react-map-gl/maplibre";
-import { FaMapPin, FaCopy } from "react-icons/fa";
+import { FaMapPin, FaCopy, FaStreetView, FaMapMarkedAlt } from "react-icons/fa";
 import SelectedMarker from "./map/SelectedMarker";
+import PoiMarkers from "./map/PoiMarkers"; // Import the PoiMarkers component
+import PoiSidebar from "./map/PoiSidebar"; // Import the PoiSidebar component
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useTheme } from "../context/ThemeContext";
 import MapSearchBar from "./ui/MapSearchBar";
 import { FcOk } from "react-icons/fc";
+import { fetchPointsOfInterest } from "../utils/poiService"; // Import the POI service
 
 const MapComponent = ({
   imageData,
@@ -52,6 +55,16 @@ const MapComponent = ({
 
   // State to store track groups
   const [trackGroups, setTrackGroups] = useState({});
+
+  // State for POI mode
+  const [poiMode, setPoiMode] = useState(false);
+  const [pois, setPois] = useState(null);
+  const [isLoadingPois, setIsLoadingPois] = useState(false);
+  const [poiSearchRadius, setPoiSearchRadius] = useState(5); // Default radius in meters
+
+  // State for POI hover and sidebar
+  const [hoveredPoiId, setHoveredPoiId] = useState(null);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
 
   // Helper function to get coordinates based on toggle state
   const getCoordinates = (feature) => {
@@ -99,6 +112,22 @@ const MapComponent = ({
       `${trackName}-path-line`,
     ]),
   ];
+
+  // Toggle POI mode
+  const togglePoiMode = () => {
+    setPoiMode((prev) => {
+      // If turning on POI mode, automatically expand the sidebar
+      if (!prev) {
+        setSidebarCollapsed(false);
+      }
+      return !prev;
+    });
+
+    // Clear POIs when turning off POI mode
+    if (poiMode) {
+      setPois(null);
+    }
+  };
 
   // Function to toggle between coordinate types
   const toggleCoordinateType = () => {
@@ -206,12 +235,42 @@ const MapComponent = ({
     }
   }, [selectedImage]);
 
+  // Handle hovering POI in the sidebar
+  const handlePoiHover = (poiId) => {
+    setHoveredPoiId(poiId);
+  };
+
+  // Handle fetching POIs when in POI mode and user clicks on the map
+  const fetchPois = async (lat, lon) => {
+    setIsLoadingPois(true);
+    try {
+      const data = await fetchPointsOfInterest(lat, lon, poiSearchRadius);
+      setPois(data.pois);
+
+      // Auto-expand sidebar when POIs are found
+      if (data.pois && data.pois.length > 0) {
+        setSidebarCollapsed(false);
+      }
+    } catch (error) {
+      console.error("Error fetching POIs:", error);
+    } finally {
+      setIsLoadingPois(false);
+    }
+  };
+
   const onMapClick = useCallback(
     (event) => {
       // Get the map instance from the event
       const map = event.target;
 
       try {
+        // If in POI mode, fetch POIs near the clicked point
+        if (poiMode) {
+          const { lngLat } = event;
+          fetchPois(lngLat.lat, lngLat.lng);
+          return;
+        }
+
         // Use queryRenderedFeatures to get all features at the click point
         const features = map.queryRenderedFeatures(event.point);
 
@@ -248,7 +307,7 @@ const MapComponent = ({
         console.error("Error handling map click:", error);
       }
     },
-    [onImageSelect, trackGroups]
+    [onImageSelect, trackGroups, poiMode, poiSearchRadius]
   );
 
   // Handle copying coordinates to clipboard
@@ -310,6 +369,27 @@ const MapComponent = ({
         <div className='absolute left-1/2 transform -translate-x-1/2 top-4 z-10 w-full max-w-xl px-4'>
           <MapSearchBar onLocationSelect={handleLocationSelect} className='' />
         </div>
+      )}
+
+      {/* POI Sidebar - only when not in compact mode */}
+      {!isCompact && poiMode && (
+        <PoiSidebar
+          pois={pois}
+          onHover={handlePoiHover}
+          activePoiId={hoveredPoiId}
+          collapsed={sidebarCollapsed}
+          setCollapsed={setSidebarCollapsed}
+        />
+      )}
+
+      {/* Collapsed sidebar indicator */}
+      {!isCompact && poiMode && sidebarCollapsed && pois && pois.length > 0 && (
+        <button
+          onClick={() => setSidebarCollapsed(false)}
+          className='fixed left-0 top-1/2 transform -translate-y-1/2 z-20 bg-purple-600 text-white py-4 px-2 rounded-r-md shadow-md hover:bg-purple-700 transition-colors'
+        >
+          <TiMediaPlayOutline></TiMediaPlayOutline>
+        </button>
       )}
 
       <Map
@@ -471,7 +551,7 @@ const MapComponent = ({
         ))}
 
         {/* Selected Image Marker - Now support both sources: imageData.features and selectedFeature from MBTiles click */}
-        {selectedImageId && (
+        {selectedImageId && !poiMode && (
           <>
             {/* Try to find the feature in imageData.features */}
             {imageData.features
@@ -516,6 +596,11 @@ const MapComponent = ({
                 />
               )}
           </>
+        )}
+
+        {/* Show POI markers when in POI mode and we have POI data */}
+        {poiMode && pois && (
+          <PoiMarkers pois={pois} hoveredPoiId={hoveredPoiId} />
         )}
 
         {/* Track-specific points layers - also respect showPoints state */}
@@ -644,6 +729,16 @@ const MapComponent = ({
             </div>
           </Popup>
         )}
+
+        {/* POI Loading Indicator */}
+        {isLoadingPois && (
+          <div className='absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 z-20'>
+            <div className='bg-white p-3 rounded-lg shadow-lg flex items-center space-x-3'>
+              <div className='animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-blue-500'></div>
+              <span>Loading nearby POIs...</span>
+            </div>
+          </div>
+        )}
       </Map>
 
       {/* Refresh button in the top-left corner */}
@@ -770,10 +865,10 @@ const MapComponent = ({
 
       {/* Toggle buttons container */}
       {!isCompact && (
-        <div className='absolute top-14 right-16 z-10'>
+        <div className='absolute top-14 right-16 z-10 flex flex-col space-y-2'>
           <button
             onClick={togglePointsVisibility}
-            className='glass px-4 py-3 rounded-xl shadow-lg text-sm font-semibold flex items-center space-x-2 transition-all hover:shadow-xl border border-white/30 mb-2'
+            className='glass px-4 py-3 rounded-xl shadow-lg text-sm font-semibold flex items-center space-x-2 transition-all hover:shadow-xl border border-white/30'
           >
             <svg
               xmlns='http://www.w3.org/2000/svg'
@@ -815,6 +910,36 @@ const MapComponent = ({
               ></div>
             </div>
           </button>
+
+          {/* POI mode toggle button */}
+          <button
+            onClick={togglePoiMode}
+            className='glass px-4 py-3 rounded-xl shadow-lg text-sm font-semibold flex items-center space-x-2 transition-all hover:shadow-xl border border-white/30'
+          >
+            {poiMode ? (
+              <FaStreetView className='text-purple-600 w-5 h-5' />
+            ) : (
+              <FaMapMarkedAlt className='text-gray-600 w-5 h-5' />
+            )}
+            <span
+              className={
+                poiMode ? "text-purple-600 font-bold" : "text-gray-600"
+              }
+            >
+              {poiMode ? "POI Mode: ON" : "POI Mode: OFF"}
+            </span>
+            <div
+              className={`w-10 h-5 rounded-full p-0.5 ml-1 transition-colors duration-300 ${
+                poiMode ? "bg-purple-500" : "bg-gray-300"
+              }`}
+            >
+              <div
+                className={`w-4 h-4 rounded-full bg-white transform duration-300 ease-in-out shadow-md ${
+                  poiMode ? "translate-x-5" : "translate-x-0"
+                }`}
+              ></div>
+            </div>
+          </button>
         </div>
       )}
 
@@ -822,8 +947,16 @@ const MapComponent = ({
       {!isCompact && (
         <div className='absolute left-4 bottom-16 glass p-3 rounded-lg shadow-lg max-w-xs text-sm opacity-80 hover:opacity-100 transition-opacity duration-300'>
           <p className='font-medium'>
-            Click on any green point to view the street image at that location.
+            {poiMode
+              ? "POI Mode: Click anywhere on the map to find nearby points of interest."
+              : "Click on any green point to view the street image at that location."}
           </p>
+          {poiMode && pois && (
+            <p className='text-xs mt-1 text-purple-600'>
+              Found {pois.length} points of interest.{" "}
+              {sidebarCollapsed ? "Open sidebar to view list." : ""}
+            </p>
+          )}
         </div>
       )}
     </div>
