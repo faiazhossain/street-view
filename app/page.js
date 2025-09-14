@@ -228,6 +228,7 @@ export default function Home() {
           onImageSelect={handleImageSelect}
           refreshData={refreshData}
           isLoading={isLoading}
+          selectedImage={selectedImage}
         />
       </div>
 

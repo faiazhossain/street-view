@@ -26,6 +26,7 @@ const MapComponent = ({
   refreshData,
   isLoading,
   initialViewState = null, // Add initialViewState prop with default value of null
+  selectedImage,
 }) => {
   const { darkMode } = useTheme();
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -187,6 +188,18 @@ const MapComponent = ({
       }
     }
   }, [selectedImageId, imageData, selectedFeature]);
+
+  // Add a useEffect to update selectedFeature when selectedImage prop changes
+  useEffect(() => {
+    if (
+      selectedImage &&
+      selectedImage.properties &&
+      selectedImage.properties.id
+    ) {
+      // Update the selectedFeature with the latest selectedImage data
+      setSelectedFeature(selectedImage);
+    }
+  }, [selectedImage]);
 
   const onMapClick = useCallback(
     (event) => {
@@ -474,9 +487,8 @@ const MapComponent = ({
 
                 return (
                   <SelectedMarker
-                    key={feature.properties.id || feature.properties.id}
+                    key={feature.properties.id}
                     feature={markerFeature}
-                    images={imageData.features}
                   />
                 );
               })}
@@ -494,7 +506,6 @@ const MapComponent = ({
                 <SelectedMarker
                   key={`selected-${selectedFeature.properties.id}`}
                   feature={selectedFeature}
-                  images={[]}
                 />
               )}
           </>

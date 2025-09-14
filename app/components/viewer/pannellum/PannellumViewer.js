@@ -26,7 +26,6 @@ const PannellumViewer = ({
   onPrevImage,
   onNextImage,
 }) => {
-  console.log("🚀 ~ PannellumViewer ~ selectedImage:", selectedImage);
   const [scriptLoaded, setScriptLoaded] = useState(scriptLoadedGlobal);
   const viewerRef = useRef(null);
   const [pannellumInstance, setPannellumInstance] = useState(null);
@@ -39,7 +38,6 @@ const PannellumViewer = ({
   const savedViewPosition = useSelector((state) =>
     selectViewPosition(state, selectedImage?.properties?.id)
   );
-  console.log("🚀 ~ PannellumViewer ~ savedViewPosition:", savedViewPosition);
   const showControls = useSelector(selectShowControls); // Get the UI controls visibility state
 
   // Handle script loading
@@ -87,7 +85,6 @@ const PannellumViewer = ({
           );
 
           // Only log when debugging is needed - comment out for production
-          // console.log(`Saved position for ${selectedImage.properties.id}:`, position);
         }
       } catch (error) {
         console.error("Error saving view position:", error);
