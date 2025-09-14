@@ -345,3 +345,32 @@ body {
 .nearby-point {
   animation: nearby-point-pulse 2s infinite;
 }
+
+/* POI Marker spreading animation */
+@keyframes markerSpread {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.7);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.1);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.marker-container.animated {
+  opacity: 0;
+}
+
+/* Make sure marker icons have proper hover effects */
+.marker-container svg {
+  transition: all 0.2s ease-out;
+}
+
+.marker-container:hover svg {
+  filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.4));
+}

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Marker, Popup } from "react-map-gl/maplibre";
 import { MdLocationOn } from "react-icons/md";
 import PoiModal from "./PoiModal";
@@ -9,6 +9,78 @@ const PoiMarkers = ({ pois, hoveredPoiId }) => {
   const [selectedPoi, setSelectedPoi] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [showPopup, setShowPopup] = useState(null);
+  const [spreadPois, setSpreadPois] = useState([]);
+
+  // This function distributes POIs that share the same or very similar coordinates
+  // in a circular pattern to improve visibility
+  useEffect(() => {
+    if (!pois || pois.length === 0) {
+      setSpreadPois([]);
+      return;
+    }
+
+    // Group POIs by similar coordinates (within a small threshold)
+    const threshold = 0.00001; // Approximately 1 meters
+    const groups = [];
+
+    // Create a copy of pois to avoid modifying the original
+    const poisCopy = [...pois];
+
+    // Group POIs with similar coordinates
+    poisCopy.forEach((poi) => {
+      // Check if this POI is close to any existing group center
+      const existingGroup = groups.find((group) => {
+        const center = group.center;
+        return (
+          Math.abs(center.latitude - poi.latitude) < threshold &&
+          Math.abs(center.longitude - poi.longitude) < threshold
+        );
+      });
+
+      if (existingGroup) {
+        existingGroup.pois.push(poi);
+      } else {
+        groups.push({
+          center: { latitude: poi.latitude, longitude: poi.longitude },
+          pois: [poi],
+        });
+      }
+    });
+
+    // For each group, distribute the POIs in a circle if there's more than one
+    const spreadPoiResults = [];
+    groups.forEach((group) => {
+      const { center, pois: groupPois } = group;
+
+      if (groupPois.length === 1) {
+        // If only one POI in the group, no need to spread
+        spreadPoiResults.push({
+          ...groupPois[0],
+          spreadLatitude: groupPois[0].latitude,
+          spreadLongitude: groupPois[0].longitude,
+        });
+      } else {
+        // Spread multiple POIs in a circle
+        const radius = 0.00004 * Math.min(groupPois.length, 8); // ~4 meters * factor based on number of POIs
+        groupPois.forEach((poi, index) => {
+          // Calculate position on a circle
+          const angle = (index / groupPois.length) * Math.PI * 2;
+          const offsetX = Math.cos(angle) * radius;
+          const offsetY = Math.sin(angle) * radius;
+
+          spreadPoiResults.push({
+            ...poi,
+            spreadLatitude: center.latitude + offsetY,
+            spreadLongitude: center.longitude + offsetX,
+            // Add animation delay based on index for staggered effect
+            animationDelay: index * 200,
+          });
+        });
+      }
+    });
+
+    setSpreadPois(spreadPoiResults);
+  }, [pois]);
 
   // Handler for when a POI marker is clicked
   const handlePoiClick = (poi) => {
@@ -42,12 +114,12 @@ const PoiMarkers = ({ pois, hoveredPoiId }) => {
 
   return (
     <>
-      {pois &&
-        pois.map((poi) => (
+      {spreadPois &&
+        spreadPois.map((poi) => (
           <React.Fragment key={poi.id}>
             <Marker
-              longitude={poi.longitude}
-              latitude={poi.latitude}
+              longitude={poi.spreadLongitude}
+              latitude={poi.spreadLatitude}
               anchor='bottom'
               onClick={(e) => {
                 e.originalEvent.stopPropagation();
@@ -58,23 +130,34 @@ const PoiMarkers = ({ pois, hoveredPoiId }) => {
                 }
               }}
             >
-              <MdLocationOn
-                size={hoveredPoiId === poi.id ? 32 : 24}
-                color={getPoiColor(poi.type)}
-                className={`cursor-pointer transition-all drop-shadow-lg 
-                ${
-                  hoveredPoiId === poi.id
-                    ? "scale-125 drop-shadow-xl"
-                    : "hover:scale-110"
+              <div
+                className={`marker-container ${
+                  poi.animationDelay ? "animated" : ""
                 }`}
-              />
+                style={{
+                  animation: poi.animationDelay
+                    ? `markerSpread 0.5s ease-out ${poi.animationDelay}ms forwards`
+                    : "none",
+                }}
+              >
+                <MdLocationOn
+                  size={hoveredPoiId === poi.id ? 48 : 24}
+                  color={getPoiColor(poi.type)}
+                  className={`cursor-pointer transition-all drop-shadow-lg 
+                  ${
+                    hoveredPoiId === poi.id
+                      ? "scale-125 drop-shadow-xl"
+                      : "hover:scale-110"
+                  }`}
+                />
+              </div>
             </Marker>
 
             {/* Show a small popup with basic info */}
             {showPopup === poi.id && (
               <Popup
-                longitude={poi.longitude}
-                latitude={poi.latitude}
+                longitude={poi.spreadLongitude}
+                latitude={poi.spreadLatitude}
                 anchor='top'
                 closeButton={true}
                 closeOnClick={false}
