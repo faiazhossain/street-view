@@ -141,7 +141,7 @@ const PoiMarkers = ({ pois, hoveredPoiId }) => {
                 }}
               >
                 <MdLocationOn
-                  size={hoveredPoiId === poi.id ? 48 : 24}
+                  size={hoveredPoiId === poi.id ? 48 : 48}
                   color={getPoiColor(poi.type)}
                   className={`cursor-pointer transition-all drop-shadow-lg 
                   ${

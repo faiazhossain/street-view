@@ -19,6 +19,7 @@ import { useTheme } from "../context/ThemeContext";
 import MapSearchBar from "./ui/MapSearchBar";
 import { FcOk } from "react-icons/fc";
 import { fetchPointsOfInterest } from "../utils/poiService"; // Import the POI service
+import { TiMediaPlayOutline } from "react-icons/ti";
 
 const MapComponent = ({
   imageData,
@@ -104,7 +105,7 @@ const MapComponent = ({
 
   // Get all layer IDs for interactive layers - including the mbtiles layer
   const interactiveLayerIds = [
-    "Images", // Add the vector tile layer as interactive
+    "ThirdEye360", // Add the vector tile layer as interactive
     ...Object.keys(trackGroups).flatMap((trackName) => [
       `${trackName}-points`,
       `${trackName}-clusters`,
@@ -279,7 +280,7 @@ const MapComponent = ({
           const featureId = feature.layer.id;
 
           // Check if user clicked on vector tile layer point (from thirdEye source)
-          if (featureId === "Images") {
+          if (featureId === "ThirdEye360") {
             if (feature.properties && feature.properties.id) {
               // Update viewport to center on clicked point
               const [lng, lat] = feature.geometry.coordinates;
@@ -408,7 +409,7 @@ const MapComponent = ({
           if (!map.target.getSource("thirdEye")) {
             // Add the ThirdEye vector tile source
             map.target.addSource("thirdEye", {
-              url: "https://tiles.barikoimaps.dev/data/third_eye.json",
+              url: "http://192.168.10.105:1337/data/ThirdEye360.json",
               type: "vector",
             });
 
@@ -431,10 +432,10 @@ const MapComponent = ({
         {/* Add the vector tile layer from the ThirdEye source */}
         {vectorTilesLoaded && showPoints && (
           <Layer
-            id='Images'
+            id='ThirdEye360'
             type='circle'
             source='thirdEye'
-            source-layer='images'
+            source-layer='ThirdEye360'
             paint={{
               "circle-color": "hsl(128, 74%, 50%)",
               "circle-stroke-width": [

@@ -80,15 +80,18 @@ export default function Home() {
     const { trackNumber, imageNumber } = parseImageId(
       selectedImageData.id || selectedImageData.id
     );
+
     const nextImageNumber = imageNumber + 1;
     const nextImageId = `${trackNumber}_${nextImageNumber}`;
 
     // Fetch the next image data from API
-    const nextImageData = await fetchFeatureById(nextImageId);
+    const nextImageData = await fetchFeatureById(
+      selectedImageData.next_id || nextImageId
+    );
 
     if (nextImageData) {
       // Update state with the fetched image data
-      setSelectedImageId(nextImageId);
+      setSelectedImageId(selectedImageData.next_id || nextImageId);
       setSelectedImageData(nextImageData.properties);
     } else {
       // If API call failed, fall back to constructing URLs manually (as before)
@@ -99,7 +102,7 @@ export default function Home() {
 
       const fallbackImageData = {
         ...selectedImageData,
-        id: nextImageId,
+        id: selectedImageData.next_id || nextImageId,
         imageUrl_Comp: `${baseUrl}${trackNumber}_${nextImageNumber}_comp.jpg`,
         imageUrl_High: `${baseUrl}${trackNumber}_${nextImageNumber}.jpg`,
         initialYaw: selectedImageData.initialYaw || 0,
@@ -111,7 +114,7 @@ export default function Home() {
       };
 
       // Update the state with the constructed image data
-      setSelectedImageId(nextImageId);
+      setSelectedImageId(selectedImageData.next_id || nextImageId);
       setSelectedImageData(fallbackImageData);
     }
   }, [selectedImageData, fetchFeatureById, parseImageId]);
@@ -135,13 +138,15 @@ export default function Home() {
     // Calculate previous image ID
     const prevImageNumber = imageNumber - 1;
     const prevImageId = `${trackNumber}_${prevImageNumber}`;
-
+    console.log("🚀 ~ Home ~ selectedImageData:", selectedImageData);
     // Fetch the previous image data from API
-    const prevImageData = await fetchFeatureById(prevImageId);
+    const prevImageData = await fetchFeatureById(
+      selectedImageData.previous_id || prevImageId
+    );
 
     if (prevImageData) {
       // Update state with the fetched image data
-      setSelectedImageId(prevImageId);
+      setSelectedImageId(selectedImageData.previous_id || prevImageId);
       setSelectedImageData(prevImageData.properties);
     } else {
       // If API call failed, fall back to constructing URLs manually
@@ -154,7 +159,7 @@ export default function Home() {
 
       const fallbackImageData = {
         ...selectedImageData,
-        id: prevImageId,
+        id: selectedImageData.previous_id || prevImageId,
         imageUrl_Comp: `${baseUrl}${trackNumber}_${prevImageNumber}_comp.jpg`,
         imageUrl_High: `${baseUrl}${trackNumber}_${prevImageNumber}.jpg`,
         initialYaw: selectedImageData.initialYaw || 0,
@@ -166,7 +171,7 @@ export default function Home() {
       };
 
       // Update the state with the constructed image data
-      setSelectedImageId(prevImageId);
+      setSelectedImageId(selectedImageData.previous_id || prevImageId);
       setSelectedImageData(fallbackImageData);
     }
   }, [selectedImageData, fetchFeatureById, parseImageId]);

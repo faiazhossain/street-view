@@ -4,8 +4,6 @@ import React, { useState, useEffect } from "react";
 import { Marker } from "react-map-gl/maplibre";
 
 const SelectedMarker = ({ feature, isCompact }) => {
-  console.log("🚀 ~ SelectedMarker ~ feature:", feature);
-
   // Add state to track coordinates
   const [markerCoordinates, setMarkerCoordinates] = useState({
     longitude: feature.geometry.coordinates[0],
