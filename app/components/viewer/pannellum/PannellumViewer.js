@@ -8,7 +8,8 @@ import {
   selectViewPosition,
 } from "@/app/redux/slices/panoramaSlice";
 import { selectShowControls } from "@/app/redux/slices/uiControlsSlice";
-import { MdHd, MdOutlineHd } from "react-icons/md";
+import { MdHd, MdOutlineHd, MdAddLocation } from "react-icons/md";
+import toast from "react-hot-toast";
 // Create a ref that persists across component mounts to track script loading
 let scriptLoadedGlobal = false;
 
@@ -32,6 +33,7 @@ const PannellumViewer = ({
   const viewerId = useRef(`panorama-viewer-${Date.now()}`); // Generate unique ID for each instance
   const [isHDMode, setIsHDMode] = useState(false); // Default to compressed mode for better initial performance
   const [isLoading, setIsLoading] = useState(false); // Add loading state for image transitions
+  const [isGeneratingPoi, setIsGeneratingPoi] = useState(false); // State for POI generation loading
   // Add a debug log to check what's happening with the conditio
   // Redux
   const dispatch = useDispatch();
@@ -57,6 +59,52 @@ const PannellumViewer = ({
 
       // Need to reinitialize panorama with new image URL
       cleanupPannellum();
+    }
+  };
+
+  // Function to generate POI using the feature_id from selected image
+  const generatePoi = async () => {
+    if (!selectedImage || !selectedImage.properties.id) {
+      toast.error("No image selected or missing feature ID");
+      return;
+    }
+
+    const featureId = selectedImage.properties.id;
+    setIsGeneratingPoi(true);
+
+    try {
+      const response = await fetch(
+        "http://202.72.236.166:8001/api/generate-poi",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            feature_id: featureId,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast.success(
+          `POI generated successfully for feature ID: ${featureId}`
+        );
+        if (data.message) {
+          toast.success(data.message);
+        }
+      } else {
+        toast.error(`Error: ${data.message || "Failed to generate POI"}`);
+      }
+    } catch (error) {
+      console.error("Error generating POI:", error);
+      toast.error(
+        `Failed to generate POI: ${error.message || "Network error"}`
+      );
+    } finally {
+      setIsGeneratingPoi(false);
     }
   };
 
@@ -516,6 +564,46 @@ const PannellumViewer = ({
                 <MdHd className='text-5xl text-green-400 hover:text-gray-100' />
               ) : (
                 <MdOutlineHd className='text-white text-5xl hover:text-green-500' />
+              )}
+            </button>
+          </div>
+
+          {/* Generate POI Button */}
+          <div className='absolute bottom-40 right-2 z-10'>
+            <button
+              className={`p-2 bg-white rounded-full shadow-lg hover:bg-green-200 transition-all duration-300 ${
+                isGeneratingPoi ? "opacity-70" : "hover:scale-110"
+              }`}
+              onClick={generatePoi}
+              aria-label='Generate POI'
+              disabled={isGeneratingPoi}
+              title='Generate POI for this location'
+            >
+              {isGeneratingPoi ? (
+                <span className='flex items-center'>
+                  <svg
+                    className='animate-spin h-6 w-6 text-white'
+                    xmlns='http://www.w3.org/2000/svg'
+                    fill='none'
+                    viewBox='0 0 24 24'
+                  >
+                    <circle
+                      className='opacity-25'
+                      cx='12'
+                      cy='12'
+                      r='10'
+                      stroke='currentColor'
+                      strokeWidth='4'
+                    ></circle>
+                    <path
+                      className='opacity-75'
+                      fill='currentColor'
+                      d='M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z'
+                    ></path>
+                  </svg>
+                </span>
+              ) : (
+                <MdAddLocation className='text-black text-3xl' />
               )}
             </button>
           </div>

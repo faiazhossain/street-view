@@ -55,6 +55,7 @@ export default function Home() {
   }, []);
 
   const handleImageSelect = useCallback((imageData) => {
+    console.log("🚀 ~ Home ~ imageData:", imageData);
     // Check if imageData is a string (old behavior - just ID) or an object (new behavior - full properties)
     if (typeof imageData === "string" || typeof imageData === "number") {
       // If it's just the ID (old behavior)

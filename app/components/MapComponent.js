@@ -409,7 +409,7 @@ const MapComponent = ({
           if (!map.target.getSource("thirdEye")) {
             // Add the ThirdEye vector tile source
             map.target.addSource("thirdEye", {
-              url: "http://192.168.10.105:1337/data/ThirdEye360.json",
+              url: "https://tiles.bmapsbd.com/ThirdEye360",
               type: "vector",
             });
 
