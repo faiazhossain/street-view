@@ -8,16 +8,16 @@ import {
   selectViewPosition,
 } from "@/app/redux/slices/panoramaSlice";
 import { selectShowControls } from "@/app/redux/slices/uiControlsSlice";
-import { MdHd, MdOutlineHd, MdAddLocation } from "react-icons/md";
+import { MdHd, MdOutlineHd, MdAddLocation, MdInfo } from "react-icons/md";
+import { FaStoreAlt } from "react-icons/fa";
 import toast from "react-hot-toast";
+
 // Create a ref that persists across component mounts to track script loading
 let scriptLoadedGlobal = false;
 
 // Helper function to use direct image URLs (no proxy needed)
 const processImageUrl = (url) => {
   if (!url) return "";
-
-  // Return the URL as-is since we're using direct URLs from the server
   return url;
 };
 
@@ -30,17 +30,20 @@ const PannellumViewer = ({
   const [scriptLoaded, setScriptLoaded] = useState(scriptLoadedGlobal);
   const viewerRef = useRef(null);
   const [pannellumInstance, setPannellumInstance] = useState(null);
-  const viewerId = useRef(`panorama-viewer-${Date.now()}`); // Generate unique ID for each instance
-  const [isHDMode, setIsHDMode] = useState(false); // Default to compressed mode for better initial performance
-  const [isLoading, setIsLoading] = useState(false); // Add loading state for image transitions
-  const [isGeneratingPoi, setIsGeneratingPoi] = useState(false); // State for POI generation loading
-  // Add a debug log to check what's happening with the conditio
+  const viewerId = useRef(`panorama-viewer-${Date.now()}`);
+  const [isHDMode, setIsHDMode] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isGeneratingPoi, setIsGeneratingPoi] = useState(false);
+  const [isPoiDrawerOpen, setIsPoiDrawerOpen] = useState(false);
+  const [poiData, setPoiData] = useState([]);
+  const [isFetchingPoi, setIsFetchingPoi] = useState(false);
+
   // Redux
   const dispatch = useDispatch();
   const savedViewPosition = useSelector((state) =>
     selectViewPosition(state, selectedImage?.properties?.id)
   );
-  const showControls = useSelector(selectShowControls); // Get the UI controls visibility state
+  const showControls = useSelector(selectShowControls);
 
   // Handle script loading
   const handleScriptLoad = () => {
@@ -51,13 +54,8 @@ const PannellumViewer = ({
   // Function to toggle HD mode
   const toggleHDMode = () => {
     if (pannellumInstance && selectedImage) {
-      // Save current view position before switching
       saveCurrentViewPosition();
-
-      // Toggle HD mode
       setIsHDMode((prev) => !prev);
-
-      // Need to reinitialize panorama with new image URL
       cleanupPannellum();
     }
   };
@@ -108,6 +106,48 @@ const PannellumViewer = ({
     }
   };
 
+  // Function to fetch POI data based on lat and lon
+  const fetchPoiData = async () => {
+    if (
+      !selectedImage ||
+      !selectedImage.properties.latitude_snapped ||
+      !selectedImage.properties.longitude_snapped
+    ) {
+      toast.error("No image selected or missing coordinates");
+      setPoiData([]);
+      return;
+    }
+
+    setIsFetchingPoi(true);
+    try {
+      const response = await fetch(
+        `http://202.72.236.166:8001/api/point-of-interest?lat=${selectedImage.properties.latitude_snapped}&lon=${selectedImage.properties.longitude_snapped}&rad=5`
+      );
+      const data = await response.json();
+
+      if (response.ok && data.status === "success") {
+        setPoiData(data.pois || []);
+      } else {
+        setPoiData([]);
+        toast.error(data.message || "Failed to fetch POI data");
+      }
+    } catch (error) {
+      console.error("Error fetching POI data:", error);
+      setPoiData([]);
+      toast.error("Failed to fetch POI data: Network error");
+    } finally {
+      setIsFetchingPoi(false);
+    }
+  };
+
+  // Function to toggle POI drawer
+  const togglePoiDrawer = () => {
+    setIsPoiDrawerOpen((prev) => !prev);
+    if (!isPoiDrawerOpen && poiData.length === 0) {
+      fetchPoiData();
+    }
+  };
+
   // Function to save the current view position to Redux
   const saveCurrentViewPosition = () => {
     if (pannellumInstance && selectedImage) {
@@ -118,7 +158,6 @@ const PannellumViewer = ({
           hfov: pannellumInstance.getHfov(),
         };
 
-        // Compare with existing position before dispatching
         if (
           !savedViewPosition ||
           Math.abs(savedViewPosition.yaw - position.yaw) > 1 ||
@@ -131,8 +170,6 @@ const PannellumViewer = ({
               position,
             })
           );
-
-          // Only log when debugging is needed - comment out for production
         }
       } catch (error) {
         console.error("Error saving view position:", error);
@@ -142,24 +179,18 @@ const PannellumViewer = ({
 
   // Proper cleanup function to fully destroy Pannellum
   const cleanupPannellum = () => {
-    // Save the current view position before cleanup
     saveCurrentViewPosition();
-
     if (pannellumInstance) {
       try {
-        // Try to call the proper destroy method if available
         if (typeof pannellumInstance.destroy === "function") {
           pannellumInstance.destroy();
         }
       } catch (error) {
         console.error("Error destroying pannellum instance:", error);
       }
-
-      // Fallback cleanup - clear the HTML
       if (viewerRef.current) {
         viewerRef.current.innerHTML = "";
       }
-
       setPannellumInstance(null);
     }
   };
@@ -168,44 +199,32 @@ const PannellumViewer = ({
   useEffect(() => {
     if (!scriptLoaded || !selectedImage || !viewerRef.current) return;
 
-    // Create a flag to track if we already have an instance for this specific image
     const currentImageId = selectedImage.properties.id;
     const hasExistingInstanceForImage =
       pannellumInstance && viewerRef.current._currentImageId === currentImageId;
 
-    // Skip initialization if we already have an instance for this image
     if (hasExistingInstanceForImage) return;
 
-    // Clean up previous instance
     cleanupPannellum();
 
-    // Initialize with a small delay to ensure DOM is ready
     const initTimer = setTimeout(() => {
-      // Use the global window.pannellum object
       if (window.pannellum) {
         try {
-          // Make sure the element is empty
           if (viewerRef.current) {
             viewerRef.current.innerHTML = "";
-            // Store the current image ID on the DOM element for reference
             viewerRef.current._currentImageId = currentImageId;
           }
 
-          // Find the current index in the images array to determine if prev/next buttons should be shown
           const currentIndex = images.findIndex(
             (img) => img.properties.id === selectedImage?.properties.id
           );
 
-          // Create hotspots for navigation - only if showControls is true
           const hotSpots = [];
 
           if (showControls) {
-            // Fixed positions for next and prev hotspots
-            // Use constant positions instead of calculating based on initialYaw
-            const nextYaw = 0; // Fixed position for next (forward/up direction)
-            const prevYaw = 180; // Fixed position for prev (backward/down direction)
+            const nextYaw = 0;
+            const prevYaw = 180;
 
-            // Helper function to extract track and image numbers from ID
             const parseImageId = (id) => {
               if (!id) return { trackNumber: 0, imageNumber: 0 };
               const match = String(id).match(/^(\d+)_(\d+)/);
@@ -217,10 +236,8 @@ const PannellumViewer = ({
                 : { trackNumber: 0, imageNumber: 0 };
             };
 
-            // Parse current image ID to determine if it's not the first image
             const { imageNumber } = parseImageId(currentImageId);
 
-            // Always add Next button hotspot since we're working with sequences
             hotSpots.push({
               pitch: 0,
               yaw: nextYaw,
@@ -228,19 +245,14 @@ const PannellumViewer = ({
               cssClass: "custom-hotspot next-hotspot",
               createTooltipFunc: (hotSpotDiv) => {
                 hotSpotDiv.classList.add("custom-tooltip");
-
-                // Create SVG element for the icon (pointing up)
                 const nextIcon = document.createElement("div");
                 nextIcon.innerHTML = `<svg fill="#fff" height="200px" width="200px" version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 330 330" xml:space="preserve"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path id="XMLID_224_" d="M325.606,229.393l-150.004-150C172.79,76.58,168.974,75,164.996,75c-3.979,0-7.794,1.581-10.607,4.394 l-149.996,150c-5.858,5.858-5.858,15.355,0,21.213c5.857,5.857,15.355,5.858,21.213,0l139.39-139.393l139.397,139.393 C307.322,253.536,311.161,255,315,255c3.839,0,7.678-1.464,10.607-4.394C331.464,244.748,331.464,235.251,325.606,229.393z" /> </g></svg>`;
                 nextIcon.classList.add("hotspot-icon", "fixed-icon");
                 hotSpotDiv.appendChild(nextIcon);
-
                 const nextText = document.createElement("span");
                 nextText.textContent = "NEXT";
                 nextText.classList.add("hotspot-text");
                 hotSpotDiv.appendChild(nextText);
-
-                // Save current view position before navigating
                 hotSpotDiv.addEventListener("click", () => {
                   saveCurrentViewPosition();
                   onNextImage();
@@ -248,7 +260,6 @@ const PannellumViewer = ({
               },
             });
 
-            // Add Previous button hotspot if not the first image (imageNumber > 0)
             if (imageNumber > 0) {
               hotSpots.push({
                 pitch: 0,
@@ -257,8 +268,6 @@ const PannellumViewer = ({
                 cssClass: "custom-hotspot prev-hotspot",
                 createTooltipFunc: (hotSpotDiv) => {
                   hotSpotDiv.classList.add("custom-tooltip");
-
-                  // Create SVG element for the icon (pointing down)
                   const prevIcon = document.createElement("div");
                   prevIcon.innerHTML = `<svg fill="#fff" width="800px" height="800px" viewBox="0 -6 524 524" xmlns="http://www.w3.org/2000/svg" ><title>down</title><path d="M64 191L98 157 262 320 426 157 460 191 262 387 64 191Z" /></svg>`;
                   prevIcon.classList.add(
@@ -267,13 +276,10 @@ const PannellumViewer = ({
                     "down-icon"
                   );
                   hotSpotDiv.appendChild(prevIcon);
-
                   const prevText = document.createElement("span");
                   prevText.textContent = "PREV";
                   prevText.classList.add("hotspot-text");
                   hotSpotDiv.appendChild(prevText);
-
-                  // Save current view position before navigating
                   hotSpotDiv.addEventListener("click", () => {
                     saveCurrentViewPosition();
                     onPrevImage();
@@ -283,8 +289,6 @@ const PannellumViewer = ({
             }
           }
 
-          // Get initialYaw from the saved position or the default from data
-          // Use saved view position if available, otherwise use the default from image data
           const initialYaw = savedViewPosition
             ? savedViewPosition.yaw
             : selectedImage.properties.initialYaw || 0;
@@ -295,10 +299,7 @@ const PannellumViewer = ({
             ? savedViewPosition.hfov
             : selectedImage.properties.initialHfov || 100;
 
-          // Determine which image URL to use - preferring the _Comp and _High properties
           let imageUrl;
-
-          // Check if this is a direct URL image with both HD and compressed versions
           if (
             selectedImage.properties.imageUrl_High &&
             selectedImage.properties.imageUrl_Comp
@@ -307,7 +308,6 @@ const PannellumViewer = ({
               ? selectedImage.properties.imageUrl_High
               : selectedImage.properties.imageUrl_Comp;
           } else {
-            // Fall back to standard imageUrl logic for backward compatibility
             imageUrl = isHDMode
               ? selectedImage.properties.imageUrl_High ||
                 selectedImage.properties.imageUrl
@@ -334,11 +334,11 @@ const PannellumViewer = ({
             keyboardZoom: true,
             hotSpots: hotSpots,
             onLoad: () => {
-              setIsLoading(false); // Clear loading state when image is loaded
+              setIsLoading(false);
             },
             onError: (err) => {
               console.error("Pannellum Error:", err);
-              setIsLoading(false); // Clear loading state on error too
+              setIsLoading(false);
             },
           });
 
@@ -351,9 +351,8 @@ const PannellumViewer = ({
         console.error("Pannellum not available on window object");
         setIsLoading(false);
       }
-    }, 50); // Small delay to ensure DOM is ready
+    }, 50);
 
-    // Clean up on unmount or before re-initializing
     return () => {
       clearTimeout(initTimer);
       cleanupPannellum();
@@ -367,21 +366,15 @@ const PannellumViewer = ({
     savedViewPosition,
     dispatch,
     isHDMode,
-    showControls, // Add showControls as a dependency to re-render when it changes
+    showControls,
   ]);
 
   // Effect to handle visibility changes for existing hotspots
   useEffect(() => {
-    // Find all hotspot elements and update their visibility based on showControls
     if (viewerRef.current) {
       const hotspots = viewerRef.current.querySelectorAll(".custom-hotspot");
-
       hotspots.forEach((hotspot) => {
-        if (showControls) {
-          hotspot.style.display = "flex"; // Show hotspots
-        } else {
-          hotspot.style.display = "none"; // Hide hotspots
-        }
+        hotspot.style.display = showControls ? "flex" : "none";
       });
     }
   }, [showControls]);
@@ -390,13 +383,8 @@ const PannellumViewer = ({
   useEffect(() => {
     if (!pannellumInstance || !selectedImage) return;
 
-    // Save view position less frequently (every 5 seconds instead of 2)
-    // This reduces Redux state updates and potential re-renders
     const saveInterval = setInterval(saveCurrentViewPosition, 5000);
-
-    // Save position on user interactions
     const handleInteraction = () => {
-      // Use a debounced version of the save function to prevent excessive saves
       clearTimeout(viewerRef.current.saveTimeout);
       viewerRef.current.saveTimeout = setTimeout(saveCurrentViewPosition, 500);
     };
@@ -421,14 +409,17 @@ const PannellumViewer = ({
   // Update navigation buttons based on viewer orientation
   useEffect(() => {
     if (!pannellumInstance || !selectedImage) return;
-
-    // No need to update arrow orientations since we want them fixed
-    // Cleaning up the previous effect logic that was rotating the arrows
-
-    return () => {
-      // Clean up only needed for potential event listeners if added later
-    };
+    return () => {};
   }, [pannellumInstance, selectedImage]);
+
+  // Fetch POI data when selectedImage changes
+  useEffect(() => {
+    setPoiData([]);
+    setIsPoiDrawerOpen(false);
+    if (isPoiDrawerOpen) {
+      fetchPoiData();
+    }
+  }, [selectedImage]);
 
   // Final cleanup on component unmount
   useEffect(() => {
@@ -439,7 +430,6 @@ const PannellumViewer = ({
 
   return (
     <>
-      {/* Load Pannellum scripts */}
       <Script
         src='https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js'
         onLoad={handleScriptLoad}
@@ -450,22 +440,18 @@ const PannellumViewer = ({
         href='https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css'
       />
 
-      {/* Pannellum viewer container with dynamic ID */}
       <div id={viewerId.current} ref={viewerRef} className='w-full h-full' />
 
-      {/* Loading Overlay */}
       {isLoading && (
         <div className='absolute inset-0 bg-black/50 flex items-center justify-center z-50'>
           <div className='animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500'></div>
         </div>
       )}
 
-      {/* Fixed Navigation Controls - Only shown when showControls is true */}
       {pannellumInstance && selectedImage && showControls && (
         <>
           <div className='fixed-nav-controls'>
             <div className='vertical-nav-buttons'>
-              {/* Always show Next button for direct image URLs, or check array position for normal images */}
               {(selectedImage.properties.imageUrl_Comp ||
                 images.findIndex(
                   (img) => img.properties.id === selectedImage?.properties.id
@@ -494,7 +480,6 @@ const PannellumViewer = ({
                 </button>
               )}
 
-              {/* Always show Prev button for direct image URLs with imageNumber > 0, or check array position for normal images */}
               {((selectedImage.properties.imageUrl_Comp &&
                 selectedImage.properties.id &&
                 String(
@@ -528,10 +513,15 @@ const PannellumViewer = ({
             </div>
           </div>
 
-          {/* HD Toggle Button - Improved styling */}
-          <div className='absolute bottom-20 right-2 z-10'>
+          <div className='absolute bottom-[8.5%] right-2 z-10'>
             <button
-              className={`py-2 rounded-lg transition-all duration-300`}
+              className={`p-2 rounded-full bg-white shadow-md transition-all duration-300 ease-in-out
+    ${
+      isLoading
+        ? "opacity-60 cursor-not-allowed"
+        : "hover:scale-105 hover:shadow-lg"
+    }
+  `}
               onClick={toggleHDMode}
               aria-label='Toggle HD mode'
               disabled={isLoading}
@@ -539,7 +529,7 @@ const PannellumViewer = ({
               {isLoading ? (
                 <span className='flex items-center'>
                   <svg
-                    className='animate-spin -ml-1 mr-2 h-4 w-4 text-white'
+                    className='animate-spin h-5 w-5 text-gray-600'
                     xmlns='http://www.w3.org/2000/svg'
                     fill='none'
                     viewBox='0 0 24 24'
@@ -555,21 +545,22 @@ const PannellumViewer = ({
                     <path
                       className='opacity-75'
                       fill='currentColor'
-                      d='M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z'
+                      d='M4 12a8 8 0 018-8V0C5.373 0 0 
+          5.373 0 12h4zm2 5.291A7.962 7.962 0 
+          014 12H0c0 3.042 1.135 5.824 
+          3 7.938l3-2.647z'
                     ></path>
                   </svg>
-                  Loading
                 </span>
               ) : isHDMode ? (
-                <MdHd className='text-5xl text-green-400 hover:text-gray-100' />
+                <MdHd className='text-3xl text-green-500 transition-colors duration-300' />
               ) : (
-                <MdOutlineHd className='text-white text-5xl hover:text-green-500' />
+                <MdOutlineHd className='text-3xl text-gray-700 hover:text-green-500 transition-colors duration-300' />
               )}
             </button>
           </div>
 
-          {/* Generate POI Button */}
-          <div className='absolute bottom-40 right-2 z-10'>
+          <div className='absolute bottom-[16%] right-2 z-10'>
             <button
               className={`p-2 bg-white rounded-full shadow-lg hover:bg-green-200 transition-all duration-300 ${
                 isGeneratingPoi ? "opacity-70" : "hover:scale-110"
@@ -607,6 +598,137 @@ const PannellumViewer = ({
               )}
             </button>
           </div>
+
+          {/* POI Drawer Toggle Button */}
+          <div className='absolute bottom-[23.5%] right-2 z-10'>
+            <button
+              className={`p-3 bg-gradient-to-br from-white to-gray-100 rounded-full shadow-md hover:shadow-lg transition-all duration-200 ease-in-out ${
+                isFetchingPoi
+                  ? "opacity-60 cursor-not-allowed"
+                  : "hover:scale-105 hover:bg-blue-50"
+              }`}
+              onClick={togglePoiDrawer}
+              aria-label='Toggle Points of Interest Drawer'
+              disabled={isFetchingPoi}
+              title='View Points of Interest'
+            >
+              {isFetchingPoi ? (
+                <span className='flex items-center justify-center'>
+                  <svg
+                    className='animate-spin h-5 w-5 text-gray-600'
+                    xmlns='http://www.w3.org/2000/svg'
+                    fill='none'
+                    viewBox='0 0 24 24'
+                  >
+                    <circle
+                      className='opacity-25'
+                      cx='12'
+                      cy='12'
+                      r='10'
+                      stroke='currentColor'
+                      strokeWidth='4'
+                    ></circle>
+                    <path
+                      className='opacity-75'
+                      fill='currentColor'
+                      d='M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z'
+                    ></path>
+                  </svg>
+                </span>
+              ) : (
+                <FaStoreAlt className='text-gray-800 text-2xl' />
+              )}
+            </button>
+          </div>
+
+          {/* POI Drawer */}
+          {isPoiDrawerOpen && (
+            <div className='absolute z-50 top-24 left-1  bg-white rounded-xl shadow-xl p-3 max-w-xs w-full max-h-[50vh] overflow-y-auto transition-all duration-300 ease-out'>
+              <h3 className='text-base font-semibold text-gray-800 mb-2'>
+                Points of Interest
+              </h3>
+              {isFetchingPoi ? (
+                <div className='flex items-center justify-center py-4'>
+                  <svg
+                    className='animate-spin h-5 w-5 text-blue-500'
+                    xmlns='http://www.w3.org/2000/svg'
+                    fill='none'
+                    viewBox='0 0 24 24'
+                  >
+                    <circle
+                      className='opacity-25'
+                      cx='12'
+                      cy='12'
+                      r='10'
+                      stroke='currentColor'
+                      strokeWidth='4'
+                    ></circle>
+                    <path
+                      className='opacity-75'
+                      fill='currentColor'
+                      d='M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z'
+                    ></path>
+                  </svg>
+                </div>
+              ) : poiData.length > 0 ? (
+                <ul className='space-y-4'>
+                  {poiData.map((poi) => (
+                    <li
+                      key={poi.id}
+                      className='bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-300 p-4 border border-gray-100'
+                    >
+                      {/* Title */}
+                      <div className='font-semibold text-gray-800 text-base flex items-center gap-2'>
+                        <span className='w-2 h-2 rounded-full bg-indigo-500'></span>
+                        {poi.text}
+                      </div>
+
+                      {/* Meta Info */}
+                      <div className='mt-3 text-xs text-gray-600 space-y-1'>
+                        <div className='flex items-center gap-2'>
+                          <span className='font-medium text-gray-700'>
+                            Type:
+                          </span>
+                          <span className='px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 font-medium'>
+                            {poi.type}
+                          </span>
+                        </div>
+
+                        <div className='flex items-center gap-2'>
+                          <span className='font-medium text-gray-700'>
+                            Location:
+                          </span>
+                          <span className='truncate'>{poi.location}</span>
+                        </div>
+
+                        <div className='flex items-center gap-2'>
+                          <span className='font-medium text-gray-700'>
+                            Confidence:
+                          </span>
+                          <span className='px-2 py-0.5 rounded-full bg-green-50 text-green-600 font-medium'>
+                            {(poi.confidence * 100).toFixed(0)}%
+                          </span>
+                        </div>
+
+                        <div className='flex items-center gap-2'>
+                          <span className='font-medium text-gray-700'>
+                            Language:
+                          </span>
+                          <span className='px-2 py-0.5 rounded-full bg-pink-50 text-pink-600 font-medium'>
+                            {poi.language}
+                          </span>
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className='text-gray-500 text-sm py-2'>
+                  No data available
+                </div>
+              )}
+            </div>
+          )}
         </>
       )}
     </>

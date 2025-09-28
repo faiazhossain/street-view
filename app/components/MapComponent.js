@@ -743,34 +743,9 @@ const MapComponent = ({
       </Map>
 
       {/* Refresh button in the top-left corner */}
-      {!isCompact && refreshData && (
-        <div className='absolute top-28 right-1 z-10'>
-          <button
-            onClick={handleRefresh}
-            disabled={isLoading || isRefreshing}
-            className='glass p-2.5 rounded-xl shadow-md hover:shadow-lg transition-all border border-white/30 flex items-center justify-center'
-            title='Refresh data'
-          >
-            <svg
-              xmlns='http://www.w3.org/2000/svg'
-              width='20'
-              height='20'
-              viewBox='0 0 24 24'
-              className={`${
-                isRefreshing || isLoading
-                  ? "animate-spin text-blue-500"
-                  : "text-gray-700"
-              }`}
-              fill='currentColor'
-            >
-              <path d='M12 22c5.421 0 10-4.579 10-10h-2c0 4.337-3.663 8-8 8s-8-3.663-8-8c0-4.336 3.663-8 8-8V2C6.579 2 2 6.58 2 12c0 5.421 4.579 10 10 10z'></path>
-            </svg>
-          </button>
-        </div>
-      )}
 
       {/* Toggle button in the top-right corner - with compact version for mini-map */}
-      <div className={`absolute top-3 right-${isCompact ? "3" : "16"} z-10`}>
+      <div className={`absolute bottom-[16%] right-1 z-10`}>
         {isCompact ? (
           /* Compact toggle for mini-map */
           <div className='flex flex-col gap-1'>
@@ -824,14 +799,17 @@ const MapComponent = ({
           /* Full-size toggle for main map */
           <button
             onClick={toggleCoordinateType}
-            className='glass px-4 py-3 rounded-xl shadow-lg text-sm font-semibold flex items-center space-x-2 transition-all hover:shadow-xl border border-white/30'
+            className={`relative px-3 py-2 rounded-full shadow-sm flex items-center space-x-2 transition-all duration-300 
+            bg-white/80 backdrop-blur-md border border-gray-200 
+            hover:shadow-md hover:scale-105`}
           >
+            {/* Icon */}
             <svg
               xmlns='http://www.w3.org/2000/svg'
               viewBox='0 0 20 20'
               fill='currentColor'
-              className={`w-5 h-5 ${
-                useSnappedCoordinates ? "text-blue-600" : "text-gray-600"
+              className={`w-4 h-4 transition-colors duration-300 ${
+                useSnappedCoordinates ? "text-blue-600" : "text-gray-500"
               }`}
             >
               <path
@@ -840,24 +818,24 @@ const MapComponent = ({
                 clipRule='evenodd'
               />
             </svg>
+
+            {/* Label */}
             <span
-              className={
-                useSnappedCoordinates
-                  ? "text-blue-600 font-bold"
-                  : "text-gray-600"
-              }
-            >
-              {useSnappedCoordinates ? "Snapped Path" : "Original Path"}
-            </span>
-            <div
-              className={`w-10 h-5 rounded-full p-0.5 ml-1 transition-colors duration-300 ${
-                useSnappedCoordinates ? "bg-blue-500" : "bg-gray-300"
+              className={`text-xs font-medium transition-colors duration-300 ${
+                useSnappedCoordinates ? "text-blue-600" : "text-gray-700"
               }`}
             >
+              {useSnappedCoordinates ? "Snapped" : "Original"}
+            </span>
+
+            {/* Toggle Switch */}
+            <div
+              className={`w-8 h-4 rounded-full p-0.5 ml-1 flex items-center transition-colors duration-300 
+              ${useSnappedCoordinates ? "bg-blue-500" : "bg-gray-300"}`}
+            >
               <div
-                className={`w-4 h-4 rounded-full bg-white transform duration-300 ease-in-out shadow-md ${
-                  useSnappedCoordinates ? "translate-x-5" : "translate-x-0"
-                }`}
+                className={`w-3.5 h-3.5 rounded-full bg-white shadow-sm transform duration-300 ease-in-out 
+                ${useSnappedCoordinates ? "translate-x-4" : "translate-x-0"}`}
               ></div>
             </div>
           </button>
@@ -866,78 +844,94 @@ const MapComponent = ({
 
       {/* Toggle buttons container */}
       {!isCompact && (
-        <div className='absolute top-14 right-16 z-10 flex flex-col space-y-2'>
+        <div className='absolute bottom-[22%] right-1 z-10 flex flex-col space-y-2'>
+          {/* Points Visibility Toggle */}
           <button
             onClick={togglePointsVisibility}
-            className='glass px-4 py-3 rounded-xl shadow-lg text-sm font-semibold flex items-center space-x-2 transition-all hover:shadow-xl border border-white/30'
+            className={`relative px-3 py-2 rounded-full shadow-sm flex items-center space-x-2 transition-all duration-300
+        bg-white/80 backdrop-blur-md border border-gray-200
+        hover:shadow-md hover:scale-105`}
           >
+            {/* Icon */}
             <svg
               xmlns='http://www.w3.org/2000/svg'
               fill='none'
               viewBox='0 0 24 24'
-              stroke-width='1.5'
+              strokeWidth='1.5'
               stroke='currentColor'
-              className={`w-5 h-5 ${
-                showPoints ? "text-green-600" : "text-gray-600"
+              className={`w-4 h-4 transition-colors duration-300 ${
+                showPoints ? "text-green-600" : "text-gray-500"
               }`}
             >
               <path
-                stroke-linecap='round'
-                stroke-linejoin='round'
+                strokeLinecap='round'
+                strokeLinejoin='round'
                 d='M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z'
               />
               <path
-                stroke-linecap='round'
-                stroke-linejoin='round'
+                strokeLinecap='round'
+                strokeLinejoin='round'
                 d='M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z'
               />
             </svg>
+
+            {/* Label */}
             <span
-              className={
-                showPoints ? "text-green-600 font-bold" : "text-gray-600"
-              }
-            >
-              {showPoints ? "Points Visible" : "Points Hidden"}
-            </span>
-            <div
-              className={`w-10 h-5 rounded-full p-0.5 ml-1 transition-colors duration-300 ${
-                showPoints ? "bg-green-500" : "bg-gray-300"
+              className={`text-xs font-medium transition-colors duration-300 ${
+                showPoints ? "text-green-600" : "text-gray-700"
               }`}
             >
+              {showPoints ? "Visible" : "Hidden"}
+            </span>
+
+            {/* Toggle Switch */}
+            <div
+              className={`w-8 h-4 rounded-full p-0.5 ml-1 flex items-center transition-colors duration-300
+          ${showPoints ? "bg-green-500" : "bg-gray-300"}`}
+            >
               <div
-                className={`w-4 h-4 rounded-full bg-white transform duration-300 ease-in-out shadow-md ${
-                  showPoints ? "translate-x-5" : "translate-x-0"
-                }`}
+                className={`w-3.5 h-3.5 rounded-full bg-white shadow-sm transform duration-300 ease-in-out
+            ${showPoints ? "translate-x-4" : "translate-x-0"}`}
               ></div>
             </div>
           </button>
 
-          {/* POI mode toggle button */}
+          {/* POI Mode Toggle */}
+        </div>
+      )}
+      {!isCompact && (
+        <div className='absolute bottom-[10%] right-1 z-10 flex flex-col space-y-2'>
+          {/* POI Mode Toggle */}
           <button
             onClick={togglePoiMode}
-            className='glass px-4 py-3 rounded-xl shadow-lg text-sm font-semibold flex items-center space-x-2 transition-all hover:shadow-xl border border-white/30'
+            className={`relative px-3 py-2 rounded-full shadow-sm flex items-center space-x-2 transition-all duration-300
+        bg-white/80 backdrop-blur-md border border-gray-200
+        hover:shadow-md hover:scale-105`}
           >
+            {/* Icon */}
             {poiMode ? (
-              <FaStreetView className='text-purple-600 w-5 h-5' />
+              <FaStreetView className='text-purple-600 w-4 h-4' />
             ) : (
-              <FaMapMarkedAlt className='text-gray-600 w-5 h-5' />
+              <FaMapMarkedAlt className='text-gray-500 w-4 h-4' />
             )}
+
+            {/* Label */}
             <span
-              className={
-                poiMode ? "text-purple-600 font-bold" : "text-gray-600"
-              }
-            >
-              {poiMode ? "POI Mode: ON" : "POI Mode: OFF"}
-            </span>
-            <div
-              className={`w-10 h-5 rounded-full p-0.5 ml-1 transition-colors duration-300 ${
-                poiMode ? "bg-purple-500" : "bg-gray-300"
+              className={`text-xs font-medium transition-colors duration-300 ${
+                poiMode ? "text-purple-600" : "text-gray-700"
               }`}
             >
+              {poiMode ? "POI Mode" : "POI Mode"}
+            </span>
+
+            {/* Toggle Switch */}
+            <div
+              className={`w-8 h-4 rounded-full p-0.5 ml-1 flex items-center transition-colors duration-300
+          ${poiMode ? "bg-purple-500" : "bg-gray-300"}`}
+            >
               <div
-                className={`w-4 h-4 rounded-full bg-white transform duration-300 ease-in-out shadow-md ${
-                  poiMode ? "translate-x-5" : "translate-x-0"
-                }`}
+                className={`w-3.5 h-3.5 rounded-full bg-white shadow-sm transform duration-300 ease-in-out
+            ${poiMode ? "translate-x-4" : "translate-x-0"}`}
               ></div>
             </div>
           </button>
