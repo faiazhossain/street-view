@@ -37,7 +37,7 @@ export default function Home() {
     setIsLoadingFeature(true);
     try {
       const response = await fetch(
-        `http://202.72.236.166:8001/api/features/${featureId}`
+        `https://streetview.bmapsbd.com/api/api/features/${featureId}`
       );
 
       if (!response.ok) {

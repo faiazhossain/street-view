@@ -30,13 +30,16 @@ export async function GET(request) {
       data = JSON.parse(fileContent);
     } catch (err) {
       // Local cache file not found or invalid, fetching from API
-      const response = await fetch("http://202.72.236.166:8001/api/features", {
-        headers: {
-          "Content-Type": "application/json",
-        },
-        // Add cache: 'no-store' to prevent reusing previous response
-        cache: "no-store",
-      });
+      const response = await fetch(
+        "https://streetview.bmapsbd.com/api/api/features/",
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+          // Add cache: 'no-store' to prevent reusing previous response
+          cache: "no-store",
+        }
+      );
 
       if (!response.ok) {
         throw new Error(`API response error: ${response.status}`);
@@ -50,7 +53,7 @@ export async function GET(request) {
           ...data,
           _metadata: {
             timestamp: Date.now(),
-            source: "http://202.72.236.166:8001/api/features",
+            source: "https://streetview.bmapsbd.com/api/api/features/",
           },
         };
         await fs.writeFile(localFilePath, JSON.stringify(saveData, null, 2));

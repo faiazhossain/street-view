@@ -121,7 +121,7 @@ const PannellumViewer = ({
     setIsFetchingPoi(true);
     try {
       const response = await fetch(
-        `http://202.72.236.166:8001/api/point-of-interest?lat=${selectedImage.properties.latitude_snapped}&lon=${selectedImage.properties.longitude_snapped}&rad=5`
+        `https://streetview.bmapsbd.com/api/api/point-of-interest?lat=${selectedImage.properties.latitude_snapped}&lon=${selectedImage.properties.longitude_snapped}&rad=5`
       );
       const data = await response.json();
 
