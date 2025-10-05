@@ -99,7 +99,7 @@ export default function Home() {
       console.warn("Falling back to manual URL construction for next image");
 
       // Create the base URL based on the current track
-      const baseUrl = `http://202.72.236.166:8001/track${trackNumber}/`;
+      const baseUrl = `https://streetview.bmapsbd.com/api/track${trackNumber}/`;
 
       const fallbackImageData = {
         ...selectedImageData,
@@ -156,7 +156,7 @@ export default function Home() {
       );
 
       // Create the base URL based on the current track
-      const baseUrl = `http://202.72.236.166:8001/track${trackNumber}/`;
+      const baseUrl = `https://streetview.bmapsbd.com/api/track${trackNumber}/`;
 
       const fallbackImageData = {
         ...selectedImageData,

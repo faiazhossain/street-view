@@ -72,7 +72,7 @@ const PannellumViewer = ({
 
     try {
       const response = await fetch(
-        "http://202.72.236.166:8001/api/generate-poi",
+        "https://streetview.bmapsbd.com/api/api/generate-poi",
         {
           method: "POST",
           headers: {

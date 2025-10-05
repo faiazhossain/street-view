@@ -10,7 +10,7 @@
 export const fetchPointsOfInterest = async (lat, lon, radius = 5) => {
   try {
     const response = await fetch(
-      `http://202.72.236.166:8001/api/point-of-interest?lat=${lat}&lon=${lon}&rad=${radius}`
+      `https://streetview.bmapsbd.com/api/api/point-of-interest?lat=${lat}&lon=${lon}&rad=${radius}`
     );
 
     if (!response.ok) {
