@@ -10,10 +10,18 @@ import Map, {
   Marker,
   Popup,
 } from "react-map-gl/maplibre";
-import { FaMapPin, FaCopy, FaStreetView, FaMapMarkedAlt } from "react-icons/fa";
+import {
+  FaMapPin,
+  FaCopy,
+  FaStreetView,
+  FaMapMarkedAlt,
+  FaTrashAlt,
+} from "react-icons/fa";
 import SelectedMarker from "./map/SelectedMarker";
 import PoiMarkers from "./map/PoiMarkers"; // Import the PoiMarkers component
 import PoiSidebar from "./map/PoiSidebar"; // Import the PoiSidebar component
+import DeletePointsModal from "./map/DeletePointsModal"; // Import the new delete modal
+import DeleteMarkers from "./map/DeleteMarkers"; // Import the delete markers component
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useTheme } from "../context/ThemeContext";
 import MapSearchBar from "./ui/MapSearchBar";
@@ -67,6 +75,14 @@ const MapComponent = ({
   const [hoveredPoiId, setHoveredPoiId] = useState(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
 
+  // State for delete mode
+  const [deleteMode, setDeleteMode] = useState(false);
+  const [selectedPointsForDeletion, setSelectedPointsForDeletion] = useState(
+    []
+  );
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeletingPoints, setIsDeletingPoints] = useState(false);
+
   // Helper function to get coordinates based on toggle state
   const getCoordinates = (feature) => {
     if (!feature?.properties) return [0, 0];
@@ -114,12 +130,101 @@ const MapComponent = ({
     ]),
   ];
 
+  // Toggle delete mode
+  const toggleDeleteMode = () => {
+    setDeleteMode((prev) => {
+      // If turning off delete mode, clear selected points
+      if (prev) {
+        setSelectedPointsForDeletion([]);
+      }
+      // If turning on delete mode, turn off POI mode
+      if (!prev && poiMode) {
+        setPoiMode(false);
+        setPois(null);
+      }
+      return !prev;
+    });
+  };
+
+  // Add point to deletion selection
+  const addPointForDeletion = (feature) => {
+    const point = {
+      id: feature.properties.id,
+      latitude: feature.geometry.coordinates[1],
+      longitude: feature.geometry.coordinates[0],
+      // Store additional properties for display
+      imageUrl_High: feature.properties.imageUrl_High,
+      imageUrl_Comp: feature.properties.imageUrl_Comp,
+      capture_date: feature.properties.capture_date,
+    };
+
+    setSelectedPointsForDeletion((prev) => {
+      // Check if point is already selected
+      const exists = prev.find((p) => p.id === point.id);
+      if (!exists) {
+        return [...prev, point];
+      }
+      return prev;
+    });
+  };
+
+  // Remove point from deletion selection
+  const removePointFromDeletion = (pointId) => {
+    setSelectedPointsForDeletion((prev) =>
+      prev.filter((p) => p.id !== pointId)
+    );
+  };
+
+  // Handle delete confirmation
+  const handleDeleteConfirm = async (pointIds) => {
+    setIsDeletingPoints(true);
+    try {
+      const response = await fetch(
+        "https://streetview.bmapsbd.com/api/api/features/delete-batch",
+        {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            feature_ids: pointIds,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Delete request failed: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log("Delete result:", result);
+
+      // Clear selected points and turn off delete mode
+      setSelectedPointsForDeletion([]);
+      setDeleteMode(false);
+
+      // Refresh data if available
+      if (refreshData) {
+        refreshData();
+      }
+    } catch (error) {
+      console.error("Error deleting points:", error);
+      alert(`Failed to delete points: ${error.message}`);
+    } finally {
+      setIsDeletingPoints(false);
+    }
+  };
+
   // Toggle POI mode
   const togglePoiMode = () => {
     setPoiMode((prev) => {
-      // If turning on POI mode, automatically expand the sidebar
+      // If turning on POI mode, automatically expand the sidebar and turn off delete mode
       if (!prev) {
         setSidebarCollapsed(false);
+        if (deleteMode) {
+          setDeleteMode(false);
+          setSelectedPointsForDeletion([]);
+        }
       }
       return !prev;
     });
@@ -282,7 +387,13 @@ const MapComponent = ({
           // Check if user clicked on vector tile layer point (from thirdEye source)
           if (featureId === "ThirdEye360") {
             if (feature.properties && feature.properties.id) {
-              // Update viewport to center on clicked point
+              // If in delete mode, add point to selection
+              if (deleteMode) {
+                addPointForDeletion(feature);
+                return;
+              }
+
+              // Normal mode - update viewport to center on clicked point
               const [lng, lat] = feature.geometry.coordinates;
               setViewState((prev) => ({
                 ...prev,
@@ -308,7 +419,7 @@ const MapComponent = ({
         console.error("Error handling map click:", error);
       }
     },
-    [onImageSelect, trackGroups, poiMode, poiSearchRadius]
+    [onImageSelect, trackGroups, poiMode, poiSearchRadius, deleteMode]
   );
 
   // Handle copying coordinates to clipboard
@@ -731,6 +842,14 @@ const MapComponent = ({
           </Popup>
         )}
 
+        {/* Show delete markers when in delete mode */}
+        {deleteMode && selectedPointsForDeletion.length > 0 && (
+          <DeleteMarkers
+            selectedPoints={selectedPointsForDeletion}
+            onRemovePoint={removePointFromDeletion}
+          />
+        )}
+
         {/* POI Loading Indicator */}
         {isLoadingPois && (
           <div className='absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 z-20'>
@@ -741,6 +860,48 @@ const MapComponent = ({
           </div>
         )}
       </Map>
+
+      {/* Delete mode controls */}
+      {!isCompact && deleteMode && (
+        <div className='absolute top-20 left-4 z-10 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 max-w-sm'>
+          <div className='flex items-center space-x-2 mb-3'>
+            <FaTrashAlt className='text-red-500' />
+            <h3 className='font-semibold text-gray-800 dark:text-gray-200'>
+              Delete Mode Active
+            </h3>
+          </div>
+          <p className='text-sm text-gray-600 dark:text-gray-400 mb-3'>
+            Click on green points to select them for deletion. Selected:{" "}
+            {selectedPointsForDeletion.length}
+          </p>
+          <div className='flex space-x-2'>
+            <button
+              onClick={() => setShowDeleteModal(true)}
+              disabled={selectedPointsForDeletion.length === 0}
+              className='px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center text-sm'
+            >
+              <FaTrashAlt className='mr-1' />
+              Delete ({selectedPointsForDeletion.length})
+            </button>
+            <button
+              onClick={() => setSelectedPointsForDeletion([])}
+              disabled={selectedPointsForDeletion.length === 0}
+              className='px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm'
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Points Modal */}
+      <DeletePointsModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        selectedPoints={selectedPointsForDeletion}
+        onDeleteConfirm={handleDeleteConfirm}
+        isDeleting={isDeletingPoints}
+      />
 
       {/* Refresh button in the top-left corner */}
 
@@ -895,12 +1056,47 @@ const MapComponent = ({
               ></div>
             </div>
           </button>
-
-          {/* POI Mode Toggle */}
         </div>
       )}
       {!isCompact && (
-        <div className='absolute bottom-[10%] right-1 z-10 flex flex-col space-y-2'>
+        <div className='absolute bottom-[4%] right-1 z-10 flex flex-col space-y-2'>
+          {/* Delete Mode Toggle */}
+          <button
+            onClick={toggleDeleteMode}
+            className={`relative px-3 py-2 rounded-full shadow-sm flex items-center space-x-2 transition-all duration-300
+        bg-white/80 backdrop-blur-md border border-gray-200
+        hover:shadow-md hover:scale-105 ${
+          deleteMode ? "ring-2 ring-red-500" : ""
+        }`}
+          >
+            {/* Icon */}
+            <FaTrashAlt
+              className={`w-4 h-4 transition-colors duration-300 ${
+                deleteMode ? "text-red-600" : "text-gray-500"
+              }`}
+            />
+
+            {/* Label */}
+            <span
+              className={`text-xs font-medium transition-colors duration-300 ${
+                deleteMode ? "text-red-600" : "text-gray-700"
+              }`}
+            >
+              {deleteMode ? "Delete Mode" : "Delete Mode"}
+            </span>
+
+            {/* Toggle Switch */}
+            <div
+              className={`w-8 h-4 rounded-full p-0.5 ml-1 flex items-center transition-colors duration-300
+          ${deleteMode ? "bg-red-500" : "bg-gray-300"}`}
+            >
+              <div
+                className={`w-3.5 h-3.5 rounded-full bg-white shadow-sm transform duration-300 ease-in-out
+            ${deleteMode ? "translate-x-4" : "translate-x-0"}`}
+              ></div>
+            </div>
+          </button>
+
           {/* POI Mode Toggle */}
           <button
             onClick={togglePoiMode}
@@ -942,10 +1138,19 @@ const MapComponent = ({
       {!isCompact && (
         <div className='absolute left-4 bottom-16 glass p-3 rounded-lg shadow-lg max-w-xs text-sm opacity-80 hover:opacity-100 transition-opacity duration-300'>
           <p className='font-medium'>
-            {poiMode
+            {deleteMode
+              ? "Delete Mode: Click on green points to select them for deletion. Use PIN 2017 to confirm."
+              : poiMode
               ? "POI Mode: Click anywhere on the map to find nearby points of interest."
               : "Click on any green point to view the street image at that location."}
           </p>
+          {deleteMode && selectedPointsForDeletion.length > 0 && (
+            <p className='text-xs mt-1 text-red-600'>
+              {selectedPointsForDeletion.length} point
+              {selectedPointsForDeletion.length > 1 ? "s" : ""} selected for
+              deletion.
+            </p>
+          )}
           {poiMode && pois && (
             <p className='text-xs mt-1 text-purple-600'>
               Found {pois.length} points of interest.{" "}
