@@ -153,8 +153,8 @@ const MapComponent = ({
       latitude: feature.geometry.coordinates[1],
       longitude: feature.geometry.coordinates[0],
       // Store additional properties for display
-      imageUrl_High: feature.properties.imageUrl_High,
-      imageUrl_Comp: feature.properties.imageUrl_Comp,
+      driveUrl_High: feature.properties.driveUrl_High,
+      driveUrl_Comp: feature.properties.driveUrl_Comp,
       capture_date: feature.properties.capture_date,
     };
 

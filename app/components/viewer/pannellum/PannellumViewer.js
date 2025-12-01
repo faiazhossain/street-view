@@ -15,9 +15,22 @@ import toast from "react-hot-toast";
 // Create a ref that persists across component mounts to track script loading
 let scriptLoadedGlobal = false;
 
-// Helper function to use direct image URLs (no proxy needed)
+// Helper function to proxy Google Drive URLs through our API
 const processImageUrl = (url) => {
   if (!url) return "";
+
+  // Check if it's a Google Drive URL
+  if (url.includes("drive.usercontent.google.com/download?id=")) {
+    // Extract the file ID from the URL
+    const match = url.match(/[?&]id=([^&]+)/);
+    if (match && match[1]) {
+      const fileId = match[1];
+      // Return proxied URL through our API
+      return `/api/drive-proxy?id=${fileId}`;
+    }
+  }
+
+  // Return the URL as-is for other cases
   return url;
 };
 
@@ -37,7 +50,7 @@ const PannellumViewer = ({
   const [isPoiDrawerOpen, setIsPoiDrawerOpen] = useState(false);
   const [poiData, setPoiData] = useState([]);
   const [isFetchingPoi, setIsFetchingPoi] = useState(false);
-
+  console.log("selectedImage", selectedImage);
   // Redux
   const dispatch = useDispatch();
   const savedViewPosition = useSelector((state) =>
@@ -62,15 +75,51 @@ const PannellumViewer = ({
 
   // Function to generate POI using the feature_id from selected image
   const generatePoi = async () => {
-    if (!selectedImage || !selectedImage.properties.id) {
-      toast.error("No image selected or missing feature ID");
+    if (
+      !selectedImage ||
+      !selectedImage.properties.latitude_snapped ||
+      !selectedImage.properties.longitude_snapped
+    ) {
+      toast.error("No image selected or missing required coordinates");
       return;
     }
 
-    const featureId = selectedImage.properties.id;
+    // Determine the image URL (prioritize HD, fallback to comp, then default)
+    let imageUrl;
+    if (
+      selectedImage.properties.driveUrl_High &&
+      selectedImage.properties.driveUrl_Comp
+    ) {
+      imageUrl = isHDMode
+        ? selectedImage.properties.driveUrl_High
+        : selectedImage.properties.driveUrl_Comp;
+    } else {
+      imageUrl = isHDMode
+        ? selectedImage.properties.driveUrl_High ||
+          selectedImage.properties.imageUrl
+        : selectedImage.properties.driveUrl_Comp ||
+          selectedImage.properties.imageUrl;
+    }
+
+    if (!imageUrl) {
+      toast.error("Image URL is not available");
+      return;
+    }
+
     setIsGeneratingPoi(true);
 
     try {
+      const requestBody = {
+        image_url: imageUrl,
+        latitude: selectedImage.properties.latitude_snapped,
+        longitude: selectedImage.properties.longitude_snapped,
+      };
+
+      // Add feature_id if available
+      if (selectedImage.properties.id) {
+        requestBody.feature_id = selectedImage.properties.id;
+      }
+
       const response = await fetch(
         "https://streetview.bmapsbd.com/api/api/generate-poi",
         {
@@ -78,18 +127,14 @@ const PannellumViewer = ({
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({
-            feature_id: featureId,
-          }),
+          body: JSON.stringify(requestBody),
         }
       );
 
       const data = await response.json();
 
       if (response.ok) {
-        toast.success(
-          `POI generated successfully for feature ID: ${featureId}`
-        );
+        toast.success("POI generated successfully!");
         if (data.message) {
           toast.success(data.message);
         }
@@ -301,17 +346,17 @@ const PannellumViewer = ({
 
           let imageUrl;
           if (
-            selectedImage.properties.imageUrl_High &&
-            selectedImage.properties.imageUrl_Comp
+            selectedImage.properties.driveUrl_High &&
+            selectedImage.properties.driveUrl_Comp
           ) {
             imageUrl = isHDMode
-              ? selectedImage.properties.imageUrl_High
-              : selectedImage.properties.imageUrl_Comp;
+              ? selectedImage.properties.driveUrl_High
+              : selectedImage.properties.driveUrl_Comp;
           } else {
             imageUrl = isHDMode
-              ? selectedImage.properties.imageUrl_High ||
+              ? selectedImage.properties.driveUrl_High ||
                 selectedImage.properties.imageUrl
-              : selectedImage.properties.imageUrl_Comp ||
+              : selectedImage.properties.driveUrl_Comp ||
                 selectedImage.properties.imageUrl;
           }
 
@@ -452,7 +497,7 @@ const PannellumViewer = ({
         <>
           <div className='fixed-nav-controls'>
             <div className='vertical-nav-buttons'>
-              {(selectedImage.properties.imageUrl_Comp ||
+              {(selectedImage.properties.driveUrl_Comp ||
                 images.findIndex(
                   (img) => img.properties.id === selectedImage?.properties.id
                 ) <
@@ -480,7 +525,7 @@ const PannellumViewer = ({
                 </button>
               )}
 
-              {((selectedImage.properties.imageUrl_Comp &&
+              {((selectedImage.properties.driveUrl_Comp &&
                 selectedImage.properties.id &&
                 String(
                   selectedImage.properties.id || selectedImage.properties.id
