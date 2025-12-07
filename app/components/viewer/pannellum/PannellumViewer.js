@@ -346,23 +346,23 @@ const PannellumViewer = ({
 
           let imageUrl;
           if (
-            selectedImage.properties.driveUrl_High &&
-            selectedImage.properties.driveUrl_Comp
+            selectedImage.properties.imageUrl_High &&
+            selectedImage.properties.imageUrl_Comp
           ) {
             imageUrl = isHDMode
-              ? selectedImage.properties.driveUrl_High
-              : selectedImage.properties.driveUrl_Comp;
+              ? selectedImage.properties.imageUrl_High
+              : selectedImage.properties.imageUrl_Comp;
           } else {
             imageUrl = isHDMode
-              ? selectedImage.properties.driveUrl_High ||
+              ? selectedImage.properties.imageUrl_High ||
                 selectedImage.properties.imageUrl
-              : selectedImage.properties.driveUrl_Comp ||
+              : selectedImage.properties.imageUrl_Comp ||
                 selectedImage.properties.imageUrl;
           }
 
           const viewer = window.pannellum.viewer(viewerRef.current.id, {
             type: "equirectangular",
-            panorama: processImageUrl(imageUrl),
+            panorama: imageUrl,
             autoLoad: true,
             showControls: true,
             compass: selectedImage.properties.showCompass || true,

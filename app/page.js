@@ -104,8 +104,8 @@ export default function Home() {
       const fallbackImageData = {
         ...selectedImageData,
         id: selectedImageData.next_id || nextImageId,
-        driveUrl_Comp: `${baseUrl}${trackNumber}_${nextImageNumber}_comp.jpg`,
-        driveUrl_High: `${baseUrl}${trackNumber}_${nextImageNumber}.jpg`,
+        imageUrl_Comp: `${baseUrl}${trackNumber}_${nextImageNumber}_comp.jpg`,
+        imageUrl_High: `${baseUrl}${trackNumber}_${nextImageNumber}.jpg`,
         initialYaw: selectedImageData.initialYaw || 0,
         initialPitch: selectedImageData.initialPitch || 0,
         initialHfov: selectedImageData.initialHfov || 100,
@@ -161,8 +161,8 @@ export default function Home() {
       const fallbackImageData = {
         ...selectedImageData,
         id: selectedImageData.previous_id || prevImageId,
-        driveUrl_Comp: `${baseUrl}${trackNumber}_${prevImageNumber}_comp.jpg`,
-        driveUrl_High: `${baseUrl}${trackNumber}_${prevImageNumber}.jpg`,
+        imageUrl_Comp: `${baseUrl}${trackNumber}_${prevImageNumber}_comp.jpg`,
+        imageUrl_High: `${baseUrl}${trackNumber}_${prevImageNumber}.jpg`,
         initialYaw: selectedImageData.initialYaw || 0,
         initialPitch: selectedImageData.initialPitch || 0,
         initialHfov: selectedImageData.initialHfov || 100,
