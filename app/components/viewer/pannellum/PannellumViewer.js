@@ -52,7 +52,6 @@ const PannellumViewer = ({
   const [isPoiDrawerOpen, setIsPoiDrawerOpen] = useState(false);
   const [poiData, setPoiData] = useState([]);
   const [isFetchingPoi, setIsFetchingPoi] = useState(false);
-  console.log("selectedImage", selectedImage);
   // Redux
   const dispatch = useDispatch();
   const savedViewPosition = useSelector((state) =>
@@ -78,6 +77,10 @@ const PannellumViewer = ({
     if (pannellumInstance && selectedImage) {
       saveCurrentViewPosition();
       setIsHDMode((prev) => !prev);
+      // Force recreation by clearing the current image ID
+      if (viewerRef.current) {
+        delete viewerRef.current._currentImageId;
+      }
       cleanupPannellum();
     }
   };
@@ -261,12 +264,16 @@ const PannellumViewer = ({
 
     cleanupPannellum();
 
+    // Set current image ID immediately to prevent race conditions
+    if (viewerRef.current) {
+      viewerRef.current._currentImageId = currentImageId;
+    }
+
     const initTimer = setTimeout(() => {
       if (window.pannellum) {
         try {
           if (viewerRef.current) {
             viewerRef.current.innerHTML = "";
-            viewerRef.current._currentImageId = currentImageId;
           }
 
           const currentIndex = images.findIndex(
@@ -433,7 +440,7 @@ const PannellumViewer = ({
     dispatch,
     isHDMode,
     showControls,
-    sharedViewState, // Add to dependencies
+    sharedViewState,
   ]);
 
   // Effect to handle visibility changes for existing hotspots

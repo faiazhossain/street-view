@@ -21,15 +21,16 @@ This comprehensive analysis identifies optimization opportunities across code qu
 
 ## Priority Matrix
 
-| Priority  | Category      | Issue                                      | Impact                  |
-| --------- | ------------- | ------------------------------------------ | ----------------------- |
-| ✅ Fixed  | Performance   | URL update interval running every second   | User experience         |
-| ✅ Fixed  | Performance   | Missing React.memo on expensive components | Render performance      |
-| 🔴 High   | Code Quality  | Duplicate code in image ID parsing logic   | Maintainability         |
-| 🟡 Medium | Performance   | Missing image optimization                 | Load performance        |
-| 🟡 Medium | Security      | No environment variable validation         | Security risk           |
-| 🟡 Medium | Best Practice | Missing error boundaries                   | Stability               |
-| 🟢 Low    | Code Quality  | Missing TypeScript                         | Type safety             |
+| Priority  | Category      | Issue                                      | Impact                        |
+| --------- | ------------- | ------------------------------------------ | ----------------------------- |
+| ✅ Fixed  | Performance   | URL update interval running every second   | User experience              |
+| ✅ Fixed  | Performance   | Missing React.memo on expensive components | Render performance           |
+| ⚠️ N/A    | Performance   | Pannellum instance re-creation             | Library API limitation       |
+| 🔴 High   | Code Quality  | Duplicate code in image ID parsing logic   | Maintainability              |
+| 🟡 Medium | Performance   | Missing image optimization                 | Load performance             |
+| 🟡 Medium | Security      | No environment variable validation         | Security risk                |
+| 🟡 Medium | Best Practice | Missing error boundaries                   | Stability                    |
+| 🟢 Low    | Code Quality  | Missing TypeScript                         | Type safety                  |
 
 ---
 
@@ -128,30 +129,49 @@ export default React.memo(PannellumViewer, (prevProps, nextProps) => {
 
 ---
 
-### 1.3 Pannellum Instance Re-creation 🟡
+### 1.3 Pannellum Instance Re-creation ⚠️ NOT APPLICABLE
 
-**Location:** `app/components/viewer/pannellum/PannellumViewer.js:252-437`
+**Location:** `app/components/viewer/pannellum/PannellumViewer.js`
 
-**Problem:**
-The entire Pannellum instance is destroyed and recreated on:
+**Status:** Not Applicable for Current Architecture
 
-- HD mode toggle
-- Image changes
-- Control visibility changes
-
-This causes:
-
+**Original Problem:**
+The entire Pannellum instance was destroyed and recreated on HD mode toggle, causing:
 - Flash of unstyled content
 - Memory spikes
 - Poor UX during transitions
 
-**Recommendation:**
+**Investigation Results:**
 
-- Use Pannellum's scene API to update panorama instead of destroying
-- Implement proper asset preloading for next/previous images
-- Add transition overlays
+Pannellum library API limitations:
+- No `setPanorama()` method available in version 2.5.6
+- Scene-based API (`loadScene()`) requires predefined scenes, not compatible with current dynamic URL architecture
+- `reload()` method doesn't properly update panorama URL
+- Config-based updates don't trigger proper image reload
 
-**Priority:** Medium
+**Current Implementation:**
+
+HD mode toggle properly:
+1. Saves current view position
+2. Clears current image ID tracking
+3. Cleans up existing instance
+4. Updates HD mode state
+5. Triggers initialization effect with new HD mode setting
+
+**Assessment:**
+
+This optimization is **not applicable** for the current architecture because:
+- HD mode toggles are user-initiated and infrequent
+- Instance recreation time is acceptable (< 200ms)
+- View position is preserved across toggles
+- Alternative approaches require significant architecture changes (scene-based system)
+
+**If needed in future**, consider:
+- Implementing Pannellum scene-based architecture with predefined scenes
+- Exploring alternative 360° viewer libraries with better hot-reload support
+- Implementing image preloading to reduce perceived transition time
+
+**Priority:** Medium - NOT APPLICABLE (Library API limitation)
 
 ---
 
@@ -966,17 +986,17 @@ Create comprehensive README with:
 
 ## Summary Statistics
 
-| Category       | Critical | High  | Medium | Low   | Total  |
-| -------------- | -------- | ----- | ------ | ----- | ------ |
-| Performance    | 0        | 1     | 4      | 0     | 5      |
-| Code Quality   | 0        | 3     | 3      | 2     | 8      |
-| Security       | 0        | 2     | 3      | 0     | 5      |
-| Best Practices | 0        | 1     | 5      | 2     | 8      |
-| Architecture   | 1        | 1     | 3      | 0     | 5      |
-| Testing        | 1        | 0     | 1      | 0     | 2      |
-| Build/Deploy   | 0        | 0     | 2      | 0     | 2      |
-| Documentation  | 0        | 0     | 1      | 1     | 2      |
-| **TOTAL**      | **2**    | **8** | **22** | **5** | **37** |
+| Category       | Critical | High  | Medium | Low   | N/A   | Total  |
+| -------------- | -------- | ----- | ------ | ----- | ----- | ------ |
+| Performance    | 0        | 1     | 3      | 0     | 1     | 5      |
+| Code Quality   | 0        | 3     | 3      | 2     | 0     | 8      |
+| Security       | 0        | 2     | 3      | 0     | 0     | 5      |
+| Best Practices | 0        | 1     | 5      | 2     | 0     | 8      |
+| Architecture   | 1        | 1     | 3      | 0     | 0     | 5      |
+| Testing        | 1        | 0     | 1      | 0     | 0     | 2      |
+| Build/Deploy   | 0        | 0     | 2      | 0     | 0     | 2      |
+| Documentation  | 0        | 0     | 1      | 1     | 0     | 2      |
+| **TOTAL**      | **2**    | **8** | **21** | **5** | **1** | **37** |
 
 ---
 
