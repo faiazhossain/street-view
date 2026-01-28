@@ -1163,4 +1163,11 @@ const MapComponent = ({
   );
 };
 
-export default MapComponent;
+export default React.memo(MapComponent, (prevProps, nextProps) => {
+  return (
+    prevProps.selectedImageId === nextProps.selectedImageId &&
+    prevProps.selectedImage === nextProps.selectedImage &&
+    prevProps.isLoading === nextProps.isLoading &&
+    prevProps.isCompact === nextProps.isCompact
+  );
+});

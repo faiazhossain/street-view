@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Script from "next/script";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -802,4 +802,9 @@ const PannellumViewer = ({
   );
 };
 
-export default PannellumViewer;
+export default React.memo(PannellumViewer, (prevProps, nextProps) => {
+  return (
+    prevProps.selectedImage === nextProps.selectedImage &&
+    prevProps.sharedViewState === nextProps.sharedViewState
+  );
+});

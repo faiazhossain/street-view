@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useEffect, useCallback } from "react";
+import React, { useRef, useState, useEffect, useCallback } from "react";
 import { useKeyboardNavigation } from "../../hooks/useKeyboardNavigation";
 import { useSelector } from "react-redux";
 import { selectShowControls } from "../../redux/slices/uiControlsSlice";
@@ -357,4 +357,10 @@ const ImageViewer = ({
   );
 };
 
-export default ImageViewer;
+export default React.memo(ImageViewer, (prevProps, nextProps) => {
+  return (
+    prevProps.selectedImage === nextProps.selectedImage &&
+    prevProps.isLoadingFeature === nextProps.isLoadingFeature &&
+    prevProps.sharedViewState === nextProps.sharedViewState
+  );
+});

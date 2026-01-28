@@ -10,6 +10,13 @@ import { useSearchParams, useRouter } from "next/navigation";
 // Force dynamic rendering for this page
 export const dynamic = "force-dynamic";
 
+// View state change thresholds (degrees/fov)
+const VIEW_CHANGE_THRESHOLD = {
+  yaw: 2, // Update only if yaw changes by more than 2 degrees
+  pitch: 1, // Update only if pitch changes by more than 1 degree
+  hfov: 3, // Update only if hfov changes by more than 3 degrees
+};
+
 function HomeContent() {
   const [selectedImageId, setSelectedImageId] = useState(null);
   const [selectedImageData, setSelectedImageData] = useState(null);
@@ -23,6 +30,8 @@ function HomeContent() {
   const hasProcessedSharedLink = useRef(false);
   const viewerWasOpenRef = useRef(false); // Track if viewer was previously open
   const hasInitializedView = useRef(false); // Track if view has been initialized
+  const lastUrlStateRef = useRef(null); // Track last URL state to avoid unnecessary updates
+  const updateTimeoutRef = useRef(null); // Debounce timeout
 
   // Function to update browser URL with current view state
   const updateBrowserUrl = useCallback(
@@ -83,27 +92,87 @@ function HomeContent() {
     searchParams,
   ]);
 
-  // Update URL periodically when camera view changes
+  // Update URL when camera view changes significantly (debounced, event-driven)
   useEffect(() => {
     if (!showViewer || !pannellumInstanceRef?.current || !selectedImageId)
       return;
 
-    const updateUrlInterval = setInterval(() => {
-      if (pannellumInstanceRef?.current) {
+    // Function to check if view state has changed significantly
+    const hasSignificantChange = (currentState, newState) => {
+      if (!currentState) return true;
+
+      return (
+        Math.abs(currentState.yaw - newState.yaw) > VIEW_CHANGE_THRESHOLD.yaw ||
+        Math.abs(currentState.pitch - newState.pitch) >
+          VIEW_CHANGE_THRESHOLD.pitch ||
+        Math.abs(currentState.hfov - newState.hfov) > VIEW_CHANGE_THRESHOLD.hfov
+      );
+    };
+
+    // Debounced URL update function
+    const scheduleUrlUpdate = () => {
+      // Clear any existing timeout
+      if (updateTimeoutRef.current) {
+        clearTimeout(updateTimeoutRef.current);
+      }
+
+      // Schedule update after user stops interacting (500ms debounce)
+      updateTimeoutRef.current = setTimeout(() => {
+        if (!pannellumInstanceRef?.current || !selectedImageId) return;
+
         try {
-          const viewState = {
+          const newViewState = {
             yaw: pannellumInstanceRef.current.getYaw(),
             pitch: pannellumInstanceRef.current.getPitch(),
             hfov: pannellumInstanceRef.current.getHfov(),
           };
-          updateBrowserUrl(selectedImageId, viewState);
+
+          // Only update if change is significant
+          if (hasSignificantChange(lastUrlStateRef.current, newViewState)) {
+            lastUrlStateRef.current = newViewState;
+            updateBrowserUrl(selectedImageId, newViewState);
+          }
         } catch (error) {
           // Ignore errors if pannellum is not ready
         }
-      }
-    }, 1000); // Update every second
+      }, 500); // 500ms debounce - update after user stops interacting
+    };
 
-    return () => clearInterval(updateUrlInterval);
+    // Event handlers for user interactions
+    const handleInteraction = scheduleUrlUpdate;
+
+    // Get the viewer container element
+    const viewerElement = document.querySelector(".pnlm-container");
+
+    if (viewerElement) {
+      // Listen for interaction events
+      viewerElement.addEventListener("mousedown", handleInteraction);
+      viewerElement.addEventListener("mouseup", handleInteraction);
+      viewerElement.addEventListener("wheel", handleInteraction);
+      viewerElement.addEventListener("touchstart", handleInteraction);
+      viewerElement.addEventListener("touchend", handleInteraction);
+      // Listen for keyboard events
+      viewerElement.addEventListener("keydown", handleInteraction);
+    }
+
+    // Cleanup
+    return () => {
+      if (updateTimeoutRef.current) {
+        clearTimeout(updateTimeoutRef.current);
+      }
+
+      if (viewerElement) {
+        viewerElement.removeEventListener("mousedown", handleInteraction);
+        viewerElement.removeEventListener("mouseup", handleInteraction);
+        viewerElement.removeEventListener("wheel", handleInteraction);
+        viewerElement.removeEventListener("touchstart", handleInteraction);
+        viewerElement.removeEventListener("touchend", handleInteraction);
+        viewerElement.removeEventListener("keydown", handleInteraction);
+      }
+
+      // Reset last URL state when viewer closes
+      lastUrlStateRef.current = null;
+    };
   }, [showViewer, selectedImageId, updateBrowserUrl]);
 
   // Clear URL when viewer is closed (but not on initial mount)
