@@ -1,17 +1,120 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef, Suspense } from "react";
 import PageLayout from "./components/layout/PageLayout";
 import MapComponent from "./components/MapComponent";
 import ImageViewer from "./components/viewer/ImageViewer";
 import { useImageData } from "./data/imageData";
+import { useSearchParams, useRouter } from "next/navigation";
 
-export default function Home() {
+// Force dynamic rendering for this page
+export const dynamic = "force-dynamic";
+
+function HomeContent() {
   const [selectedImageId, setSelectedImageId] = useState(null);
   const [selectedImageData, setSelectedImageData] = useState(null);
   const [showViewer, setShowViewer] = useState(false);
   const [isLoadingFeature, setIsLoadingFeature] = useState(false);
   const { isLoading, error, refreshData } = useImageData();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pannellumInstanceRef = useRef(null);
+  const [sharedViewState, setSharedViewState] = useState(null);
+  const hasProcessedSharedLink = useRef(false);
+  const viewerWasOpenRef = useRef(false); // Track if viewer was previously open
+  const hasInitializedView = useRef(false); // Track if view has been initialized
+
+  // Function to update browser URL with current view state
+  const updateBrowserUrl = useCallback(
+    (imageId, viewState = null) => {
+      if (!imageId) return;
+
+      const params = new URLSearchParams();
+      console.log(params, "params");
+      params.set("id", imageId);
+
+      if (viewState) {
+        if (viewState.yaw !== undefined)
+          params.set("yaw", viewState.yaw.toFixed(2));
+        if (viewState.pitch !== undefined)
+          params.set("pitch", viewState.pitch.toFixed(2));
+        if (viewState.hfov !== undefined)
+          params.set("hfov", viewState.hfov.toFixed(2));
+      }
+
+      // Update URL without page reload
+      router.replace(`?${params.toString()}`, { scroll: false });
+    },
+    [router]
+  );
+
+  // Update URL when image changes (but not on initial shared link load)
+  useEffect(() => {
+    if (showViewer && selectedImageId) {
+      // Skip updating URL if we're still processing a shared link with view state
+      if (sharedViewState !== null) {
+        return;
+      }
+
+      // Get current view state if pannellum is ready
+      let viewState = null;
+      if (pannellumInstanceRef?.current) {
+        try {
+          viewState = {
+            yaw: pannellumInstanceRef.current.getYaw(),
+            pitch: pannellumInstanceRef.current.getPitch(),
+            hfov: pannellumInstanceRef.current.getHfov(),
+          };
+        } catch (error) {
+          // Pannellum not ready yet, that's okay
+        }
+      }
+
+      // Only update URL if pannellum is initialized or we're not from a shared link
+      if (hasInitializedView.current || !searchParams.get("yaw")) {
+        updateBrowserUrl(selectedImageId, viewState);
+      }
+    }
+  }, [
+    selectedImageId,
+    showViewer,
+    updateBrowserUrl,
+    sharedViewState,
+    searchParams,
+  ]);
+
+  // Update URL periodically when camera view changes
+  useEffect(() => {
+    if (!showViewer || !pannellumInstanceRef?.current || !selectedImageId)
+      return;
+
+    const updateUrlInterval = setInterval(() => {
+      if (pannellumInstanceRef?.current) {
+        try {
+          const viewState = {
+            yaw: pannellumInstanceRef.current.getYaw(),
+            pitch: pannellumInstanceRef.current.getPitch(),
+            hfov: pannellumInstanceRef.current.getHfov(),
+          };
+          updateBrowserUrl(selectedImageId, viewState);
+        } catch (error) {
+          // Ignore errors if pannellum is not ready
+        }
+      }
+    }, 1000); // Update every second
+
+    return () => clearInterval(updateUrlInterval);
+  }, [showViewer, selectedImageId, updateBrowserUrl]);
+
+  // Clear URL when viewer is closed (but not on initial mount)
+  useEffect(() => {
+    if (!showViewer && viewerWasOpenRef.current) {
+      router.replace("/", { scroll: false });
+      viewerWasOpenRef.current = false;
+    } else if (showViewer) {
+      viewerWasOpenRef.current = true;
+    }
+  }, [showViewer, router]);
 
   // Helper function to extract track and image numbers from image ID
   const parseImageId = (id) => {
@@ -177,6 +280,64 @@ export default function Home() {
     }
   }, [selectedImageData, fetchFeatureById, parseImageId]);
 
+  // Process shared link from URL parameters on mount
+  useEffect(() => {
+    if (hasProcessedSharedLink.current) return;
+
+    const imageId = searchParams.get("id");
+    const yaw = searchParams.get("yaw");
+    const pitch = searchParams.get("pitch");
+    const hfov = searchParams.get("hfov");
+
+    if (imageId) {
+      hasProcessedSharedLink.current = true;
+
+      // Store the view state to apply after image loads
+      if (yaw !== null || pitch !== null || hfov !== null) {
+        setSharedViewState({
+          yaw: yaw ? parseFloat(yaw) : undefined,
+          pitch: pitch ? parseFloat(pitch) : undefined,
+          hfov: hfov ? parseFloat(hfov) : undefined,
+        });
+      }
+
+      // Fetch and display the shared image
+      fetchFeatureById(imageId).then((featureData) => {
+        if (featureData) {
+          setSelectedImageId(imageId);
+          setSelectedImageData(featureData.properties);
+          setShowViewer(true);
+        }
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
+  // Apply shared view state to pannellum when it's ready
+  useEffect(() => {
+    if (sharedViewState && pannellumInstanceRef.current && showViewer) {
+      const timer = setTimeout(() => {
+        if (pannellumInstanceRef.current) {
+          if (sharedViewState.yaw !== undefined) {
+            pannellumInstanceRef.current.setYaw(sharedViewState.yaw);
+          }
+          if (sharedViewState.pitch !== undefined) {
+            pannellumInstanceRef.current.setPitch(sharedViewState.pitch);
+          }
+          if (sharedViewState.hfov !== undefined) {
+            pannellumInstanceRef.current.setHfov(sharedViewState.hfov);
+          }
+          // Mark that we've initialized the view
+          hasInitializedView.current = true;
+          // Clear the shared state after applying
+          setSharedViewState(null);
+        }
+      }, 500); // Small delay to ensure pannellum is fully initialized
+
+      return () => clearTimeout(timer);
+    }
+  }, [sharedViewState, showViewer]);
+
   // Create a selected image object in the format expected by ImageViewer
   // Now structured to work with both MBTiles data and API responses
   const selectedImage = selectedImageData
@@ -244,8 +405,26 @@ export default function Home() {
           onClose={handleCloseViewer}
           onImageSelect={handleImageSelect}
           isLoadingFeature={isLoadingFeature}
+          pannellumInstanceRef={pannellumInstanceRef}
+          sharedViewState={sharedViewState} // Pass shared view state to ImageViewer
         />
       )}
     </PageLayout>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense
+      fallback={
+        <PageLayout title='ThirdEye360' description='Loading...'>
+          <div className='flex items-center justify-center h-64'>
+            <div className='animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500'></div>
+          </div>
+        </PageLayout>
+      }
+    >
+      <HomeContent />
+    </Suspense>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { useTheme } from "../../context/ThemeContext";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -8,14 +8,28 @@ import {
   selectShowControls,
 } from "../../redux/slices/uiControlsSlice";
 import { TbSunFilled } from "react-icons/tb";
+import { FaTimes, FaShareAlt } from "react-icons/fa";
+import toast from "react-hot-toast";
 
-const ViewerHeader = ({ title, subtitle, onClose, selectedImage }) => {
+const ViewerHeader = ({ title, subtitle, onClose, selectedImage, onShare }) => {
   const { darkMode, toggleDarkMode } = useTheme();
   const dispatch = useDispatch();
   const showControls = useSelector(selectShowControls);
+  const [isSharing, setIsSharing] = useState(false);
 
   const handleToggleControls = () => {
     dispatch(toggleControlsVisibility());
+  };
+
+  const handleShare = async () => {
+    if (isSharing || !onShare) return;
+
+    setIsSharing(true);
+    try {
+      await onShare();
+    } finally {
+      setIsSharing(false);
+    }
   };
 
   // Generate a display subtitle based on the selected image if available
@@ -104,6 +118,44 @@ const ViewerHeader = ({ title, subtitle, onClose, selectedImage }) => {
             </svg>
           )}
         </button>
+
+        {/* Share Button */}
+        {onShare && (
+          <button
+            onClick={handleShare}
+            disabled={isSharing}
+            className={`glass text-white hover:bg-white/20 rounded-full p-2.5 shadow-md transition-all duration-200 ${
+              isSharing ? "opacity-50 cursor-not-allowed" : "hover:scale-110"
+            }`}
+            title='Share this view'
+            aria-label='Share'
+          >
+            {isSharing ? (
+              <svg
+                className='animate-spin h-5 w-5'
+                xmlns='http://www.w3.org/2000/svg'
+                fill='none'
+                viewBox='0 0 24 24'
+              >
+                <circle
+                  className='opacity-25'
+                  cx='12'
+                  cy='12'
+                  r='10'
+                  stroke='currentColor'
+                  strokeWidth='4'
+                ></circle>
+                <path
+                  className='opacity-75'
+                  fill='currentColor'
+                  d='M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z'
+                ></path>
+              </svg>
+            ) : (
+              <FaShareAlt className='text-xl' />
+            )}
+          </button>
+        )}
 
         {/* Close button */}
         <button

@@ -8,8 +8,10 @@ import PannellumViewer from "./pannellum/PannellumViewer";
 import ViewerHeader from "./ViewerHeader";
 import ViewerFooter from "./ViewerFooter";
 import MapComponent from "../MapComponent";
+import ShareModal from "./ShareModal";
 import "../../styles/pannellum-hotspots.css";
 import { FcCompactCamera } from "react-icons/fc";
+import toast from "react-hot-toast";
 
 // Helper function to extract track and image numbers from image ID
 const parseImageId = (id) => {
@@ -37,6 +39,8 @@ const ImageViewer = ({
   pathData,
   onImageSelect,
   isLoadingFeature = false, // Add prop to indicate API loading state
+  pannellumInstanceRef, // New prop to get pannellum instance
+  sharedViewState, // Add sharedViewState prop
 }) => {
   const [isAutoPlaying, setIsAutoPlaying] = useState(false);
   const [showMiniMap, setShowMiniMap] = useState(true); // Default to shown
@@ -49,6 +53,8 @@ const ImageViewer = ({
   const timerRef = useRef(null);
   const [fadeIn, setFadeIn] = useState(true); // For transition animations
   const showControls = useSelector(selectShowControls); // Get UI controls visibility state from Redux
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [shareUrl, setShareUrl] = useState("");
 
   // Toggle auto-play functionality
   const toggleAutoPlay = () => {
@@ -59,6 +65,51 @@ const ImageViewer = ({
   const toggleMiniMap = () => {
     setShowMiniMap((prev) => !prev);
   };
+
+  // Share functionality - Updated to use custom modal
+  const handleShare = useCallback(async () => {
+    if (!selectedImage) {
+      toast.error("No image selected to share");
+      return;
+    }
+
+    try {
+      // Get current view state from pannellum instance if available
+      let viewState = {};
+      if (pannellumInstanceRef?.current) {
+        viewState = {
+          yaw: pannellumInstanceRef.current.getYaw(),
+          pitch: pannellumInstanceRef.current.getPitch(),
+          hfov: pannellumInstanceRef.current.getHfov(),
+        };
+      }
+
+      // Build the shareable URL
+      const baseUrl = window.location.origin;
+      const imageId =
+        selectedImage.properties.id || selectedImage.properties.id;
+
+      const params = new URLSearchParams({
+        id: imageId,
+        ...(viewState.yaw !== undefined && { yaw: viewState.yaw.toFixed(2) }),
+        ...(viewState.pitch !== undefined && {
+          pitch: viewState.pitch.toFixed(2),
+        }),
+        ...(viewState.hfov !== undefined && {
+          hfov: viewState.hfov.toFixed(2),
+        }),
+      });
+
+      const generatedShareUrl = `${baseUrl}?${params.toString()}`;
+
+      // Set the share URL and open the modal
+      setShareUrl(generatedShareUrl);
+      setIsShareModalOpen(true);
+    } catch (error) {
+      console.error("Error generating share link:", error);
+      toast.error("Failed to generate share link. Please try again.");
+    }
+  }, [selectedImage, pannellumInstanceRef]);
 
   // Start or stop the auto-play timer based on isAutoPlaying state
   useEffect(() => {
@@ -181,6 +232,8 @@ const ImageViewer = ({
           showControls={showControls}
           trackNumber={trackNumber}
           imageNumber={imageNumber}
+          selectedImage={selectedImage}
+          onShare={handleShare}
         />
 
         <div className='relative flex-grow overflow-hidden'>
@@ -191,6 +244,8 @@ const ImageViewer = ({
             onNextImage={onNextImage}
             showControls={showControls}
             isLoading={isLoadingFeature}
+            pannellumInstanceRef={pannellumInstanceRef}
+            sharedViewState={sharedViewState} // Pass shared view state to PannellumViewer
           />
 
           {/* Loading overlay - Only show when fetching next/prev image */}
@@ -286,6 +341,17 @@ const ImageViewer = ({
             </div>
           </div>
         )}
+
+        {/* Share Modal */}
+        <ShareModal
+          isOpen={isShareModalOpen}
+          onClose={() => setIsShareModalOpen(false)}
+          shareUrl={shareUrl}
+          imageId={
+            selectedImage?.properties?.id || selectedImage?.properties?.id
+          }
+          pannellumInstanceRef={pannellumInstanceRef}
+        />
       </div>
     </div>
   );

@@ -39,6 +39,8 @@ const PannellumViewer = ({
   images,
   onPrevImage,
   onNextImage,
+  pannellumInstanceRef, // New prop to expose instance
+  sharedViewState, // Add sharedViewState prop from parent
 }) => {
   const [scriptLoaded, setScriptLoaded] = useState(scriptLoadedGlobal);
   const viewerRef = useRef(null);
@@ -57,6 +59,13 @@ const PannellumViewer = ({
     selectViewPosition(state, selectedImage?.properties?.id)
   );
   const showControls = useSelector(selectShowControls);
+
+  // Expose pannellum instance to parent via ref
+  useEffect(() => {
+    if (pannellumInstanceRef) {
+      pannellumInstanceRef.current = pannellumInstance;
+    }
+  }, [pannellumInstance, pannellumInstanceRef]);
 
   // Handle script loading
   const handleScriptLoad = () => {
@@ -334,15 +343,27 @@ const PannellumViewer = ({
             }
           }
 
-          const initialYaw = savedViewPosition
-            ? savedViewPosition.yaw
-            : selectedImage.properties.initialYaw || 0;
-          const initialPitch = savedViewPosition
-            ? savedViewPosition.pitch
-            : selectedImage.properties.initialPitch || 0;
-          const initialHfov = savedViewPosition
-            ? savedViewPosition.hfov
-            : selectedImage.properties.initialHfov || 100;
+          // Use sharedViewState if available, otherwise use saved position or defaults
+          const initialYaw =
+            sharedViewState?.yaw !== undefined
+              ? sharedViewState.yaw
+              : savedViewPosition
+              ? savedViewPosition.yaw
+              : selectedImage.properties.initialYaw || 0;
+
+          const initialPitch =
+            sharedViewState?.pitch !== undefined
+              ? sharedViewState.pitch
+              : savedViewPosition
+              ? savedViewPosition.pitch
+              : selectedImage.properties.initialPitch || 0;
+
+          const initialHfov =
+            sharedViewState?.hfov !== undefined
+              ? sharedViewState.hfov
+              : savedViewPosition
+              ? savedViewPosition.hfov
+              : selectedImage.properties.initialHfov || 100;
 
           let imageUrl;
           if (
@@ -412,6 +433,7 @@ const PannellumViewer = ({
     dispatch,
     isHDMode,
     showControls,
+    sharedViewState, // Add to dependencies
   ]);
 
   // Effect to handle visibility changes for existing hotspots
