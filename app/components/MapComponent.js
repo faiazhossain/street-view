@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useMemo } from "react";
 import Map, {
   Source,
   Layer,
@@ -84,7 +84,7 @@ const MapComponent = ({
   const [isDeletingPoints, setIsDeletingPoints] = useState(false);
 
   // Helper function to get coordinates based on toggle state
-  const getCoordinates = (feature) => {
+  const getCoordinates = useCallback((feature) => {
     if (!feature?.properties) return [0, 0];
 
     // Use snapped coordinates if available and toggle is on
@@ -101,23 +101,28 @@ const MapComponent = ({
 
     // Fall back to original coordinates
     return feature.geometry.coordinates;
-  };
+  }, [useSnappedCoordinates]);
 
-  // Create feature collection with appropriate coordinates based on toggle
-  const getPointsFeatureCollection = (features) => {
-    return {
-      type: "FeatureCollection",
-      features: features.map((feature) => {
-        // Make a deep copy to avoid mutating the original
-        const newFeature = JSON.parse(JSON.stringify(feature));
+  // Memoized feature collections for each track to avoid expensive recalculation
+  const memoizedFeatureCollections = useMemo(() => {
+    const collections = {};
 
-        // Update coordinates based on toggle selection
-        newFeature.geometry.coordinates = getCoordinates(feature);
+    Object.entries(trackGroups).forEach(([trackName, trackData]) => {
+      collections[trackName] = {
+        type: "FeatureCollection",
+        features: trackData.features.map((feature) => ({
+          type: "Feature",
+          properties: feature.properties,
+          geometry: {
+            type: "Point",
+            coordinates: getCoordinates(feature),
+          },
+        })),
+      };
+    });
 
-        return newFeature;
-      }),
-    };
-  };
+    return collections;
+  }, [trackGroups, getCoordinates]);
 
   // Get all layer IDs for interactive layers - including the mbtiles layer
   const interactiveLayerIds = [
@@ -723,9 +728,7 @@ const MapComponent = ({
               <Source
                 id={`${trackName}-points-source`}
                 type='geojson'
-                data={getPointsFeatureCollection(
-                  trackGroups[trackName].features
-                )}
+                data={memoizedFeatureCollections[trackName]}
               >
                 <Layer
                   id={`${trackName}-points`}
