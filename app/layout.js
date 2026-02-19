@@ -2,6 +2,7 @@ import localFont from "next/font/local";
 import "./globals.css";
 import ReduxProvider from "./redux/provider";
 import { ThemeProvider } from "./context/ThemeContext";
+import { AuthProvider } from "./context/AuthContext";
 import { Toaster } from "react-hot-toast";
 
 const geistSans = localFont({
@@ -27,8 +28,21 @@ export default function RootLayout({ children }) {
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <ThemeProvider>
-          <ReduxProvider>{children}</ReduxProvider>
-          <Toaster position='bottom-center' />
+          <AuthProvider>
+            <ReduxProvider>{children}</ReduxProvider>
+          </AuthProvider>
+          <Toaster
+            position='bottom-center'
+            toastOptions={{
+              duration: 4000,
+              success: {
+                duration: 4000,
+              },
+              error: {
+                duration: 5000,
+              },
+            }}
+          />
         </ThemeProvider>
       </body>
     </html>

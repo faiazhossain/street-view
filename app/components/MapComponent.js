@@ -16,6 +16,7 @@ import {
   FaStreetView,
   FaMapMarkedAlt,
   FaTrashAlt,
+  FaCrosshairs,
 } from "react-icons/fa";
 import SelectedMarker from "./map/SelectedMarker";
 import PoiMarkers from "./map/PoiMarkers"; // Import the PoiMarkers component
@@ -24,7 +25,9 @@ import DeletePointsModal from "./map/DeletePointsModal"; // Import the new delet
 import DeleteMarkers from "./map/DeleteMarkers"; // Import the delete markers component
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useTheme } from "../context/ThemeContext";
+import { useAuth } from "../context/AuthContext";
 import MapSearchBar from "./ui/MapSearchBar";
+import toast from "react-hot-toast";
 import { FcOk } from "react-icons/fc";
 import { fetchPointsOfInterest } from "../utils/poiService"; // Import the POI service
 import { TiMediaPlayOutline } from "react-icons/ti";
@@ -41,8 +44,14 @@ const MapComponent = ({
   selectedImage,
 }) => {
   const { darkMode } = useTheme();
+  const { isAuthenticated, user } = useAuth();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showPoints, setShowPoints] = useState(true); // State to control points layer visibility
+
+  // State for edit coordinates mode (only for logged in users)
+  const [editMode, setEditMode] = useState(false);
+  const [editingPoint, setEditingPoint] = useState(null);
+  const [isUpdatingCoordinates, setIsUpdatingCoordinates] = useState(false);
 
   // State for search pin location
   const [searchPinLocation, setSearchPinLocation] = useState(null);
@@ -84,24 +93,27 @@ const MapComponent = ({
   const [isDeletingPoints, setIsDeletingPoints] = useState(false);
 
   // Helper function to get coordinates based on toggle state
-  const getCoordinates = useCallback((feature) => {
-    if (!feature?.properties) return [0, 0];
+  const getCoordinates = useCallback(
+    (feature) => {
+      if (!feature?.properties) return [0, 0];
 
-    // Use snapped coordinates if available and toggle is on
-    if (
-      useSnappedCoordinates &&
-      feature.properties.longitude_snapped !== undefined &&
-      feature.properties.latitude_snapped !== undefined
-    ) {
-      return [
-        feature.properties.longitude_snapped,
-        feature.properties.latitude_snapped,
-      ];
-    }
+      // Use snapped coordinates if available and toggle is on
+      if (
+        useSnappedCoordinates &&
+        feature.properties.longitude_snapped !== undefined &&
+        feature.properties.latitude_snapped !== undefined
+      ) {
+        return [
+          feature.properties.longitude_snapped,
+          feature.properties.latitude_snapped,
+        ];
+      }
 
-    // Fall back to original coordinates
-    return feature.geometry.coordinates;
-  }, [useSnappedCoordinates]);
+      // Fall back to original coordinates
+      return feature.geometry.coordinates;
+    },
+    [useSnappedCoordinates]
+  );
 
   // Memoized feature collections for each track to avoid expensive recalculation
   const memoizedFeatureCollections = useMemo(() => {
@@ -149,6 +161,91 @@ const MapComponent = ({
       }
       return !prev;
     });
+  };
+
+  // Toggle edit coordinates mode
+  const toggleEditMode = () => {
+    setEditMode((prev) => {
+      // If turning off edit mode, clear editing point
+      if (prev) {
+        setEditingPoint(null);
+      }
+      // If turning on edit mode, turn off POI mode and delete mode
+      if (!prev) {
+        if (poiMode) {
+          setPoiMode(false);
+          setPois(null);
+        }
+        if (deleteMode) {
+          setDeleteMode(false);
+          setSelectedPointsForDeletion([]);
+        }
+      }
+      return !prev;
+    });
+  };
+
+  // Update coordinates via API
+  const updateCoordinates = async (featureId, latitude, longitude) => {
+    setIsUpdatingCoordinates(true);
+    try {
+      const payload = {
+        feature_id: String(featureId),
+        latitude: latitude,
+        longitude: longitude,
+        user_id: user?.name || user?.email || String(user?.id) || "unknown",
+      };
+
+      console.log("Updating coordinates with payload:", payload);
+
+      const response = await fetch(
+        "https://streetview.bmapsbd.com/api/api/update-snapped-coordinates",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("API Error Response:", errorText);
+        throw new Error(
+          errorText || `Update failed with status ${response.status}`
+        );
+      }
+
+      const result = await response.json();
+      console.log("Coordinates updated:", result);
+
+      // Show success toast
+      toast.success(
+        `Coordinates updated for Feature ${featureId}\nLat: ${latitude.toFixed(
+          6
+        )}, Lng: ${longitude.toFixed(6)}`,
+        { duration: 4000 }
+      );
+
+      // Refresh data if available
+      if (refreshData) {
+        refreshData();
+      }
+
+      return result;
+    } catch (error) {
+      console.error("Error updating coordinates:", error);
+
+      // Show error toast
+      toast.error(`Failed to update Feature ${featureId}: ${error.message}`, {
+        duration: 5000,
+      });
+
+      throw error;
+    } finally {
+      setIsUpdatingCoordinates(false);
+    }
   };
 
   // Add point to deletion selection
@@ -392,6 +489,19 @@ const MapComponent = ({
           // Check if user clicked on vector tile layer point (from thirdEye source)
           if (featureId === "ThirdEye360") {
             if (feature.properties && feature.properties.id) {
+              // If in edit mode, select point for dragging
+              if (editMode) {
+                console.log(
+                  "Selected feature for editing:",
+                  feature.properties
+                );
+                setEditingPoint({
+                  properties: feature.properties,
+                  geometry: feature.geometry,
+                });
+                return;
+              }
+
               // If in delete mode, add point to selection
               if (deleteMode) {
                 addPointForDeletion(feature);
@@ -424,7 +534,7 @@ const MapComponent = ({
         console.error("Error handling map click:", error);
       }
     },
-    [onImageSelect, trackGroups, poiMode, poiSearchRadius, deleteMode]
+    [onImageSelect, trackGroups, poiMode, poiSearchRadius, deleteMode, editMode]
   );
 
   // Handle copying coordinates to clipboard
@@ -853,6 +963,43 @@ const MapComponent = ({
           />
         )}
 
+        {/* Draggable marker for editing coordinates */}
+        {editMode && editingPoint && (
+          <Marker
+            longitude={editingPoint.geometry.coordinates[0]}
+            latitude={editingPoint.geometry.coordinates[1]}
+            anchor='bottom'
+            draggable={true}
+            onDragEnd={(event) => {
+              const { lngLat } = event;
+              const newCoordinates = [lngLat.lng, lngLat.lat];
+
+              // Update the editing point with new coordinates
+              setEditingPoint((prev) => ({
+                ...prev,
+                geometry: {
+                  ...prev.geometry,
+                  coordinates: newCoordinates,
+                },
+              }));
+
+              // Call API to update coordinates
+              updateCoordinates(
+                editingPoint.properties.id,
+                lngLat.lat,
+                lngLat.lng
+              );
+            }}
+          >
+            <div className='relative'>
+              <FaCrosshairs className='text-3xl text-orange-500 drop-shadow-lg animate-pulse' />
+              {/* <div className='absolute -bottom-6 left-1/2 transform -translate-x-1/2 bg-orange-500 text-white text-xs px-1.5 py-0.5 rounded whitespace-nowrap'>
+                Drag to move
+              </div> */}
+            </div>
+          </Marker>
+        )}
+
         {/* POI Loading Indicator */}
         {isLoadingPois && (
           <div className='absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 z-20'>
@@ -894,6 +1041,47 @@ const MapComponent = ({
               Clear
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Edit coordinates mode controls */}
+      {!isCompact && editMode && (
+        <div className='absolute top-20 left-4 z-10 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 max-w-sm'>
+          <div className='flex items-center space-x-2 mb-3'>
+            <FaCrosshairs className='text-orange-500' />
+            <h3 className='font-semibold text-gray-800 dark:text-gray-200'>
+              Edit Coordinates Mode
+            </h3>
+          </div>
+          <p className='text-sm text-gray-600 dark:text-gray-400 mb-3'>
+            Click on a green point to select it, then drag the marker to update
+            its coordinates.
+          </p>
+          {editingPoint && (
+            <div className='mb-3 p-2 bg-orange-50 dark:bg-orange-900/20 rounded border border-orange-200 dark:border-orange-800'>
+              <p className='text-xs font-medium text-orange-800 dark:text-orange-200'>
+                Selected Point: {editingPoint.properties.id}
+              </p>
+              <p className='text-xs text-orange-600 dark:text-orange-300'>
+                Lat: {editingPoint.geometry.coordinates[1].toFixed(6)}, Lng:{" "}
+                {editingPoint.geometry.coordinates[0].toFixed(6)}
+              </p>
+            </div>
+          )}
+          {isUpdatingCoordinates && (
+            <div className='flex items-center space-x-2 text-sm text-blue-600'>
+              <div className='animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-blue-500'></div>
+              <span>Updating coordinates...</span>
+            </div>
+          )}
+          {editingPoint && (
+            <button
+              onClick={() => setEditingPoint(null)}
+              className='px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm'
+            >
+              Deselect Point
+            </button>
+          )}
         </div>
       )}
 
@@ -1134,6 +1322,45 @@ const MapComponent = ({
               ></div>
             </div>
           </button>
+
+          {/* Edit Coordinates Toggle - Only visible when logged in */}
+          {isAuthenticated && (
+            <button
+              onClick={toggleEditMode}
+              className={`relative px-3 py-2 rounded-full shadow-sm flex items-center space-x-2 transition-all duration-300
+        bg-white/80 backdrop-blur-md border border-gray-200
+        hover:shadow-md hover:scale-105 ${
+          editMode ? "ring-2 ring-orange-500" : ""
+        }`}
+            >
+              {/* Icon */}
+              <FaCrosshairs
+                className={`w-4 h-4 transition-colors duration-300 ${
+                  editMode ? "text-orange-600" : "text-gray-500"
+                }`}
+              />
+
+              {/* Label */}
+              <span
+                className={`text-xs font-medium transition-colors duration-300 ${
+                  editMode ? "text-orange-600" : "text-gray-700"
+                }`}
+              >
+                {editMode ? "Edit Coords" : "Edit Coords"}
+              </span>
+
+              {/* Toggle Switch */}
+              <div
+                className={`w-8 h-4 rounded-full p-0.5 ml-1 flex items-center transition-colors duration-300
+          ${editMode ? "bg-orange-500" : "bg-gray-300"}`}
+              >
+                <div
+                  className={`w-3.5 h-3.5 rounded-full bg-white shadow-sm transform duration-300 ease-in-out
+            ${editMode ? "translate-x-4" : "translate-x-0"}`}
+                ></div>
+              </div>
+            </button>
+          )}
         </div>
       )}
 
@@ -1141,12 +1368,19 @@ const MapComponent = ({
       {!isCompact && (
         <div className='absolute left-4 bottom-16 glass p-3 rounded-lg shadow-lg max-w-xs text-sm opacity-80 hover:opacity-100 transition-opacity duration-300'>
           <p className='font-medium'>
-            {deleteMode
+            {editMode
+              ? "Edit Mode: Click on a green point to select it, then drag the marker to update its coordinates."
+              : deleteMode
               ? "Delete Mode: Click on green points to select them for deletion. Use PIN 2017 to confirm."
               : poiMode
               ? "POI Mode: Click anywhere on the map to find nearby points of interest."
               : "Click on any green point to view the street image at that location."}
           </p>
+          {editMode && editingPoint && (
+            <p className='text-xs mt-1 text-orange-600'>
+              Point {editingPoint.properties.id} selected. Drag to move.
+            </p>
+          )}
           {deleteMode && selectedPointsForDeletion.length > 0 && (
             <p className='text-xs mt-1 text-red-600'>
               {selectedPointsForDeletion.length} point
