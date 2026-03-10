@@ -17,12 +17,14 @@ import {
   FaMapMarkedAlt,
   FaTrashAlt,
   FaCrosshairs,
+  FaDrawPolygon,
 } from "react-icons/fa";
 import SelectedMarker from "./map/SelectedMarker";
 import PoiMarkers from "./map/PoiMarkers"; // Import the PoiMarkers component
 import PoiSidebar from "./map/PoiSidebar"; // Import the PoiSidebar component
 import DeletePointsModal from "./map/DeletePointsModal"; // Import the new delete modal
 import DeleteMarkers from "./map/DeleteMarkers"; // Import the delete markers component
+import PolygonDeletePanel from "./map/PolygonDeletePanel"; // Import the polygon delete panel
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useTheme } from "../context/ThemeContext";
 import { useAuth } from "../context/AuthContext";
@@ -92,6 +94,12 @@ const MapComponent = ({
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeletingPoints, setIsDeletingPoints] = useState(false);
 
+  // State for polygon delete mode
+  const [polygonDeleteMode, setPolygonDeleteMode] = useState(false);
+  const [polygonPoints, setPolygonPoints] = useState([]);
+  const [showPolygonPanel, setShowPolygonPanel] = useState(false);
+  const [mapInstance, setMapInstance] = useState(null);
+
   // Helper function to get coordinates based on toggle state
   const getCoordinates = useCallback(
     (feature) => {
@@ -154,10 +162,17 @@ const MapComponent = ({
       if (prev) {
         setSelectedPointsForDeletion([]);
       }
-      // If turning on delete mode, turn off POI mode
-      if (!prev && poiMode) {
-        setPoiMode(false);
-        setPois(null);
+      // If turning on delete mode, turn off POI mode and polygon delete mode
+      if (!prev) {
+        if (poiMode) {
+          setPoiMode(false);
+          setPois(null);
+        }
+        if (polygonDeleteMode) {
+          setPolygonDeleteMode(false);
+          setPolygonPoints([]);
+          setShowPolygonPanel(false);
+        }
       }
       return !prev;
     });
@@ -180,10 +195,65 @@ const MapComponent = ({
           setDeleteMode(false);
           setSelectedPointsForDeletion([]);
         }
+        if (polygonDeleteMode) {
+          setPolygonDeleteMode(false);
+          setPolygonPoints([]);
+          setShowPolygonPanel(false);
+        }
       }
       return !prev;
     });
   };
+
+  // Toggle polygon delete mode
+  const togglePolygonDeleteMode = () => {
+    setPolygonDeleteMode((prev) => {
+      if (prev) {
+        // Turning off polygon delete mode
+        setPolygonPoints([]);
+        setShowPolygonPanel(false);
+      } else {
+        // Turning on polygon delete mode
+        setShowPolygonPanel(true);
+        // Turn off other modes
+        if (poiMode) {
+          setPoiMode(false);
+          setPois(null);
+        }
+        if (deleteMode) {
+          setDeleteMode(false);
+          setSelectedPointsForDeletion([]);
+        }
+        if (editMode) {
+          setEditMode(false);
+          setEditingPoint(null);
+        }
+      }
+      return !prev;
+    });
+  };
+
+  // Handle polygon point addition
+  const addPolygonPoint = useCallback((lngLat) => {
+    setPolygonPoints((prev) => [...prev, [lngLat.lng, lngLat.lat]]);
+  }, []);
+
+  // Clear polygon
+  const clearPolygon = useCallback(() => {
+    setPolygonPoints([]);
+  }, []);
+
+  // Undo last polygon point
+  const undoLastPolygonPoint = useCallback(() => {
+    setPolygonPoints((prev) => prev.slice(0, -1));
+  }, []);
+
+  // Close polygon delete panel
+  const closePolygonPanel = useCallback(() => {
+    setShowPolygonPanel(false);
+    setPolygonDeleteMode(false);
+    setPolygonPoints([]);
+  }, []);
 
   // Update coordinates via API
   const updateCoordinates = async (featureId, latitude, longitude) => {
@@ -326,6 +396,11 @@ const MapComponent = ({
         if (deleteMode) {
           setDeleteMode(false);
           setSelectedPointsForDeletion([]);
+        }
+        if (polygonDeleteMode) {
+          setPolygonDeleteMode(false);
+          setPolygonPoints([]);
+          setShowPolygonPanel(false);
         }
       }
       return !prev;
@@ -472,6 +547,13 @@ const MapComponent = ({
       const map = event.target;
 
       try {
+        // If in polygon delete mode, add point to polygon
+        if (polygonDeleteMode) {
+          const { lngLat } = event;
+          addPolygonPoint(lngLat);
+          return;
+        }
+
         // If in POI mode, fetch POIs near the clicked point
         if (poiMode) {
           const { lngLat } = event;
@@ -534,7 +616,7 @@ const MapComponent = ({
         console.error("Error handling map click:", error);
       }
     },
-    [onImageSelect, trackGroups, poiMode, poiSearchRadius, deleteMode, editMode]
+    [onImageSelect, trackGroups, poiMode, poiSearchRadius, deleteMode, editMode, polygonDeleteMode, addPolygonPoint]
   );
 
   // Handle copying coordinates to clipboard
@@ -631,6 +713,9 @@ const MapComponent = ({
         pitchWithRotate={!isCompact}
         attributionControl={false}
         onLoad={(map) => {
+          // Store the map instance
+          setMapInstance(map.target);
+
           // Check if the thirdEye source already exists to avoid duplicates
           if (!map.target.getSource("thirdEye")) {
             // Add the ThirdEye vector tile source
@@ -695,6 +780,109 @@ const MapComponent = ({
             filter={["==", ["geometry-type"], "Point"]}
           />
         )}
+
+        {/* Polygon Delete Visualization */}
+        {polygonDeleteMode && polygonPoints && polygonPoints.length > 0 && (
+          <>
+            {/* Polygon fill */}
+            <Source
+              id="polygon-delete-fill"
+              type="geojson"
+              data={{
+                type: "Feature",
+                properties: {},
+                geometry: {
+                  type: "Polygon",
+                  coordinates: [
+                    polygonPoints.length >= 3
+                      ? [...polygonPoints, polygonPoints[0]]
+                      : polygonPoints,
+                  ],
+                },
+              }}
+            >
+              <Layer
+                id="polygon-fill-layer"
+                type="fill"
+                paint={{
+                  "fill-color": "#ef4444",
+                  "fill-opacity": 0.15,
+                }}
+              />
+            </Source>
+
+            {/* Polygon outline */}
+            <Source
+              id="polygon-delete-outline"
+              type="geojson"
+              data={{
+                type: "Feature",
+                properties: {},
+                geometry: {
+                  type: "LineString",
+                  coordinates:
+                    polygonPoints.length >= 3
+                      ? [...polygonPoints, polygonPoints[0]]
+                      : polygonPoints,
+                },
+              }}
+            >
+              <Layer
+                id="polygon-outline-layer"
+                type="line"
+                paint={{
+                  "line-color": "#ef4444",
+                  "line-width": 2,
+                  "line-dasharray": [2, 2],
+                }}
+              />
+            </Source>
+
+            {/* Polygon vertices */}
+            <Source
+              id="polygon-vertices"
+              type="geojson"
+              data={{
+                type: "FeatureCollection",
+                features: polygonPoints.map((coord, idx) => ({
+                  type: "Feature",
+                  properties: { index: idx + 1 },
+                  geometry: {
+                    type: "Point",
+                    coordinates: coord,
+                  },
+                })),
+              }}
+            >
+              <Layer
+                id="polygon-vertices-layer"
+                type="circle"
+                paint={{
+                  "circle-radius": 6,
+                  "circle-color": "#ef4444",
+                  "circle-stroke-width": 2,
+                  "circle-stroke-color": "#ffffff",
+                }}
+              />
+              {polygonPoints.length >= 1 && (
+                <Layer
+                  id="polygon-vertices-labels"
+                  type="symbol"
+                  layout={{
+                    "text-field": ["get", "index"],
+                    "text-offset": [0, 0],
+                    "text-anchor": "center",
+                    "text-size": 10,
+                  }}
+                  paint={{
+                    "text-color": "#ffffff",
+                  }}
+                />
+              )}
+            </Source>
+          </>
+        )}
+
         {/* Track-specific Layers */}
         {Object.keys(trackGroups).map((trackName) => (
           <React.Fragment key={trackName}>
@@ -1094,109 +1282,23 @@ const MapComponent = ({
         isDeleting={isDeletingPoints}
       />
 
+      {/* Polygon Delete Panel */}
+      {!isCompact && (
+        <PolygonDeletePanel
+          isOpen={showPolygonPanel}
+          onClose={closePolygonPanel}
+          polygonPoints={polygonPoints}
+          onClearPolygon={clearPolygon}
+          onUndoLastPoint={undoLastPolygonPoint}
+          map={mapInstance}
+        />
+      )}
+
       {/* Refresh button in the top-left corner */}
-
-      {/* Toggle button in the top-right corner - with compact version for mini-map */}
-      <div className={`absolute bottom-[16%] right-1 z-10`}>
-        {isCompact ? (
-          /* Compact toggle for mini-map */
-          <div className='flex flex-col gap-1'>
-            <button
-              onClick={toggleCoordinateType}
-              className='bg-white bg-opacity-70 p-1 rounded shadow-sm flex items-center text-xs border border-gray-200'
-              title={
-                useSnappedCoordinates
-                  ? "Using: Snapped Path"
-                  : "Using: Original Path"
-              }
-            >
-              <div
-                className={`w-6 h-3 rounded-full relative ${
-                  useSnappedCoordinates ? "bg-blue-500" : "bg-gray-300"
-                }`}
-              >
-                <div
-                  className={`absolute w-2.5 h-2.5 rounded-full bg-white shadow-sm transform transition-transform duration-200 ease-in-out ${
-                    useSnappedCoordinates ? "translate-x-3" : "translate-x-0.5"
-                  } top-[1px]`}
-                ></div>
-              </div>
-              <span className='ml-1 text-[10px] font-medium'>
-                {useSnappedCoordinates ? "S" : "O"}
-              </span>
-            </button>
-
-            <button
-              onClick={togglePointsVisibility}
-              className='bg-white bg-opacity-70 p-1 rounded shadow-sm flex items-center text-xs border border-gray-200'
-              title={showPoints ? "Hide Map Points" : "Show Map Points"}
-            >
-              <div
-                className={`w-6 h-3 rounded-full relative ${
-                  showPoints ? "bg-green-500" : "bg-gray-300"
-                }`}
-              >
-                <div
-                  className={`absolute w-2.5 h-2.5 rounded-full bg-white shadow-sm transform transition-transform duration-200 ease-in-out ${
-                    showPoints ? "translate-x-3" : "translate-x-0.5"
-                  } top-[1px]`}
-                ></div>
-              </div>
-              <span className='ml-1 text-[10px] font-medium'>
-                {showPoints ? "P" : "P"}
-              </span>
-            </button>
-          </div>
-        ) : (
-          /* Full-size toggle for main map */
-          <button
-            onClick={toggleCoordinateType}
-            className={`relative px-3 py-2 rounded-full shadow-sm flex items-center space-x-2 transition-all duration-300 
-            bg-white/80 backdrop-blur-md border border-gray-200 
-            hover:shadow-md hover:scale-105`}
-          >
-            {/* Icon */}
-            <svg
-              xmlns='http://www.w3.org/2000/svg'
-              viewBox='0 0 20 20'
-              fill='currentColor'
-              className={`w-4 h-4 transition-colors duration-300 ${
-                useSnappedCoordinates ? "text-blue-600" : "text-gray-500"
-              }`}
-            >
-              <path
-                fillRule='evenodd'
-                d='M9.69 18.933l.003.001C9.89 19.02 10 19 10 19s.11.02.308-.066l.002-.001.006-.003.018-.008a5.741 5.741 0 00.281-.14c.186-.096.446-.24.757-.433.62-.384 1.445-.966 2.274-1.765C15.302 14.988 17 12.493 17 9A7 7 0 103 9c0 3.492 1.698 5.988 3.355 7.584a13.731 13.731 0 002.273 1.765 11.842 11.842 0 00.976.544l.062.029.018.008.006.003zM10 11.25a2.25 2.25 0 100-4.5 2.25 2.25 0 000 4.5z'
-                clipRule='evenodd'
-              />
-            </svg>
-
-            {/* Label */}
-            <span
-              className={`text-xs font-medium transition-colors duration-300 ${
-                useSnappedCoordinates ? "text-blue-600" : "text-gray-700"
-              }`}
-            >
-              {useSnappedCoordinates ? "Snapped" : "Original"}
-            </span>
-
-            {/* Toggle Switch */}
-            <div
-              className={`w-8 h-4 rounded-full p-0.5 ml-1 flex items-center transition-colors duration-300 
-              ${useSnappedCoordinates ? "bg-blue-500" : "bg-gray-300"}`}
-            >
-              <div
-                className={`w-3.5 h-3.5 rounded-full bg-white shadow-sm transform duration-300 ease-in-out 
-                ${useSnappedCoordinates ? "translate-x-4" : "translate-x-0"}`}
-              ></div>
-            </div>
-          </button>
-        )}
-      </div>
 
       {/* Toggle buttons container */}
       {!isCompact && (
-        <div className='absolute bottom-[22%] right-1 z-10 flex flex-col space-y-2'>
+        <div className='absolute bottom-4 right-1 z-10 flex flex-col space-y-2'>
           {/* Points Visibility Toggle */}
           <button
             onClick={togglePointsVisibility}
@@ -1247,10 +1349,7 @@ const MapComponent = ({
               ></div>
             </div>
           </button>
-        </div>
-      )}
-      {!isCompact && (
-        <div className='absolute bottom-[4%] right-1 z-10 flex flex-col space-y-2'>
+
           {/* Delete Mode Toggle */}
           <button
             onClick={toggleDeleteMode}
@@ -1284,6 +1383,43 @@ const MapComponent = ({
               <div
                 className={`w-3.5 h-3.5 rounded-full bg-white shadow-sm transform duration-300 ease-in-out
             ${deleteMode ? "translate-x-4" : "translate-x-0"}`}
+              ></div>
+            </div>
+          </button>
+
+          {/* Polygon Delete Mode Toggle */}
+          <button
+            onClick={togglePolygonDeleteMode}
+            className={`relative px-3 py-2 rounded-full shadow-sm flex items-center space-x-2 transition-all duration-300
+        bg-white/80 backdrop-blur-md border border-gray-200
+        hover:shadow-md hover:scale-105 ${
+          polygonDeleteMode ? "ring-2 ring-rose-500" : ""
+        }`}
+          >
+            {/* Icon */}
+            <FaDrawPolygon
+              className={`w-4 h-4 transition-colors duration-300 ${
+                polygonDeleteMode ? "text-rose-600" : "text-gray-500"
+              }`}
+            />
+
+            {/* Label */}
+            <span
+              className={`text-xs font-medium transition-colors duration-300 ${
+                polygonDeleteMode ? "text-rose-600" : "text-gray-700"
+              }`}
+            >
+              {polygonDeleteMode ? "Polygon Del" : "Polygon Del"}
+            </span>
+
+            {/* Toggle Switch */}
+            <div
+              className={`w-8 h-4 rounded-full p-0.5 ml-1 flex items-center transition-colors duration-300
+          ${polygonDeleteMode ? "bg-rose-500" : "bg-gray-300"}`}
+            >
+              <div
+                className={`w-3.5 h-3.5 rounded-full bg-white shadow-sm transform duration-300 ease-in-out
+            ${polygonDeleteMode ? "translate-x-4" : "translate-x-0"}`}
               ></div>
             </div>
           </button>
@@ -1368,7 +1504,9 @@ const MapComponent = ({
       {!isCompact && (
         <div className='absolute left-4 bottom-16 glass p-3 rounded-lg shadow-lg max-w-xs text-sm opacity-80 hover:opacity-100 transition-opacity duration-300'>
           <p className='font-medium'>
-            {editMode
+            {polygonDeleteMode
+              ? "Polygon Delete Mode: Click on the map to draw a polygon area. At least 3 points needed."
+              : editMode
               ? "Edit Mode: Click on a green point to select it, then drag the marker to update its coordinates."
               : deleteMode
               ? "Delete Mode: Click on green points to select them for deletion. Use PIN 2017 to confirm."
@@ -1376,6 +1514,12 @@ const MapComponent = ({
               ? "POI Mode: Click anywhere on the map to find nearby points of interest."
               : "Click on any green point to view the street image at that location."}
           </p>
+          {polygonDeleteMode && polygonPoints.length > 0 && (
+            <p className='text-xs mt-1 text-rose-600'>
+              {polygonPoints.length} point{polygonPoints.length > 1 ? "s" : ""} drawn.
+              {polygonPoints.length >= 3 ? " Ready to preview." : ` Need ${3 - polygonPoints.length} more.`}
+            </p>
+          )}
           {editMode && editingPoint && (
             <p className='text-xs mt-1 text-orange-600'>
               Point {editingPoint.properties.id} selected. Drag to move.
