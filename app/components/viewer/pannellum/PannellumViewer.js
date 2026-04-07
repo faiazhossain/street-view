@@ -15,6 +15,9 @@ import toast from "react-hot-toast";
 // Create a ref that persists across component mounts to track script loading
 let scriptLoadedGlobal = false;
 
+// Timeout for drive URL fetch (in milliseconds)
+const DRIVE_URL_TIMEOUT = 8000;
+
 // Helper function to proxy Google Drive URLs through our API
 const processImageUrl = (url) => {
   if (!url) return "";
@@ -34,6 +37,110 @@ const processImageUrl = (url) => {
   return url;
 };
 
+/**
+ * Preload image with timeout and fallback mechanism
+ * Uses browser Image loading to verify the image can be loaded
+ * @param {string} driveUrl - The Google Drive URL (proxied)
+ * @param {string} fallbackUrl - The direct image URL to use as fallback
+ * @param {number} timeout - Timeout in milliseconds (default: DRIVE_URL_TIMEOUT)
+ * @returns {Promise<string>} - The URL that should be used
+ */
+const fetchImageWithFallback = (
+  driveUrl,
+  fallbackUrl,
+  timeout = DRIVE_URL_TIMEOUT,
+) => {
+  return new Promise((resolve) => {
+    // If no drive URL, return fallback immediately
+    if (!driveUrl) {
+      resolve(fallbackUrl);
+      return;
+    }
+
+    // If no fallback URL, we have no choice but to use drive URL
+    if (!fallbackUrl) {
+      resolve(driveUrl);
+      return;
+    }
+
+    // If both are the same, just return it
+    if (driveUrl === fallbackUrl) {
+      resolve(driveUrl);
+      return;
+    }
+
+    let resolved = false;
+    let timeoutId = null;
+    let fallbackTimeoutId = null;
+
+    const cleanup = () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
+      }
+      if (fallbackTimeoutId) {
+        clearTimeout(fallbackTimeoutId);
+        fallbackTimeoutId = null;
+      }
+    };
+
+    const resolveUrl = (url) => {
+      if (!resolved) {
+        resolved = true;
+        cleanup();
+        resolve(url);
+      }
+    };
+
+    // Create an Image object to preload
+    const img = new Image();
+
+    // Success - drive URL loaded successfully
+    img.onload = () => {
+      console.log("Drive URL loaded successfully");
+      resolveUrl(driveUrl);
+    };
+
+    // Error - drive URL failed, use fallback
+    img.onerror = () => {
+      console.warn("Drive URL failed to load, using fallback");
+      resolveUrl(fallbackUrl);
+    };
+
+    // Set timeout - if drive URL takes too long, use fallback
+    timeoutId = setTimeout(() => {
+      console.warn("Drive URL timed out, using fallback");
+      resolveUrl(fallbackUrl);
+    }, timeout);
+
+    // Start loading the drive URL
+    img.src = driveUrl;
+
+    // Fallback safety: if we haven't resolved in timeout + 2 seconds, force resolve
+    fallbackTimeoutId = setTimeout(() => {
+      resolveUrl(fallbackUrl);
+    }, timeout + 2000);
+  });
+};
+
+/**
+ * Get the final image URL with drive URL as primary and direct URL as fallback
+ * @param {Object} properties - Image properties containing URL fields
+ * @param {boolean} isHD - Whether HD mode is enabled
+ * @returns {string} - The selected image URL
+ */
+const getImageUrl = (properties, isHD) => {
+  // Get HD or compressed URLs based on mode
+  const driveUrl = isHD ? properties.driveUrl_High : properties.driveUrl_Comp;
+  const directUrl = isHD
+    ? properties.imageUrl_High || properties.imageUrl
+    : properties.imageUrl_Comp || properties.imageUrl;
+
+  // Return drive URL if available (will be processed with fallback later)
+  // Otherwise return direct URL
+  return driveUrl || directUrl || "";
+};
+
 const PannellumViewer = ({
   selectedImage,
   images,
@@ -48,6 +155,7 @@ const PannellumViewer = ({
   const viewerId = useRef(`panorama-viewer-${Date.now()}`);
   const [isHDMode, setIsHDMode] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [currentImageUrl, setCurrentImageUrl] = useState(null);
   const [isGeneratingPoi, setIsGeneratingPoi] = useState(false);
   const [isPoiDrawerOpen, setIsPoiDrawerOpen] = useState(false);
   const [poiData, setPoiData] = useState([]);
@@ -55,7 +163,7 @@ const PannellumViewer = ({
   // Redux
   const dispatch = useDispatch();
   const savedViewPosition = useSelector((state) =>
-    selectViewPosition(state, selectedImage?.properties?.id)
+    selectViewPosition(state, selectedImage?.properties?.id),
   );
   const showControls = useSelector(selectShowControls);
 
@@ -96,21 +204,28 @@ const PannellumViewer = ({
       return;
     }
 
-    // Determine the image URL (prioritize HD, fallback to comp, then default)
+    // Get the drive URL and direct fallback URL
+    const driveUrl = isHDMode
+      ? selectedImage.properties.driveUrl_High
+      : selectedImage.properties.driveUrl_Comp;
+
+    const directUrl = isHDMode
+      ? selectedImage.properties.imageUrl_High ||
+        selectedImage.properties.imageUrl
+      : selectedImage.properties.imageUrl_Comp ||
+        selectedImage.properties.imageUrl;
+
+    // Process the drive URL through proxy if it's a Google Drive URL
+    const processedDriveUrl = driveUrl ? processImageUrl(driveUrl) : null;
+
+    // Determine which URL to use with fallback mechanism
     let imageUrl;
-    if (
-      selectedImage.properties.driveUrl_High &&
-      selectedImage.properties.driveUrl_Comp
-    ) {
-      imageUrl = isHDMode
-        ? selectedImage.properties.driveUrl_High
-        : selectedImage.properties.driveUrl_Comp;
+    if (processedDriveUrl && directUrl && processedDriveUrl !== directUrl) {
+      // Try drive URL first, fallback to direct URL on failure
+      imageUrl = await fetchImageWithFallback(processedDriveUrl, directUrl);
     } else {
-      imageUrl = isHDMode
-        ? selectedImage.properties.driveUrl_High ||
-          selectedImage.properties.imageUrl
-        : selectedImage.properties.driveUrl_Comp ||
-          selectedImage.properties.imageUrl;
+      // Use whichever URL is available
+      imageUrl = processedDriveUrl || directUrl || "";
     }
 
     if (!imageUrl) {
@@ -140,7 +255,7 @@ const PannellumViewer = ({
             "Content-Type": "application/json",
           },
           body: JSON.stringify(requestBody),
-        }
+        },
       );
 
       const data = await response.json();
@@ -156,7 +271,7 @@ const PannellumViewer = ({
     } catch (error) {
       console.error("Error generating POI:", error);
       toast.error(
-        `Failed to generate POI: ${error.message || "Network error"}`
+        `Failed to generate POI: ${error.message || "Network error"}`,
       );
     } finally {
       setIsGeneratingPoi(false);
@@ -178,7 +293,7 @@ const PannellumViewer = ({
     setIsFetchingPoi(true);
     try {
       const response = await fetch(
-        `https://streetview.bmapsbd.com/api/api/point-of-interest?lat=${selectedImage.properties.latitude_snapped}&lon=${selectedImage.properties.longitude_snapped}&rad=5`
+        `https://streetview.bmapsbd.com/api/api/point-of-interest?lat=${selectedImage.properties.latitude_snapped}&lon=${selectedImage.properties.longitude_snapped}&rad=5`,
       );
       const data = await response.json();
 
@@ -225,7 +340,7 @@ const PannellumViewer = ({
             saveViewPosition({
               imageId: selectedImage.properties.id,
               position,
-            })
+            }),
           );
         }
       } catch (error) {
@@ -269,7 +384,7 @@ const PannellumViewer = ({
       viewerRef.current._currentImageId = currentImageId;
     }
 
-    const initTimer = setTimeout(() => {
+    const initTimer = setTimeout(async () => {
       if (window.pannellum) {
         try {
           if (viewerRef.current) {
@@ -277,7 +392,7 @@ const PannellumViewer = ({
           }
 
           const currentIndex = images.findIndex(
-            (img) => img.properties.id === selectedImage?.properties.id
+            (img) => img.properties.id === selectedImage?.properties.id,
           );
 
           const hotSpots = [];
@@ -334,7 +449,7 @@ const PannellumViewer = ({
                   prevIcon.classList.add(
                     "hotspot-icon",
                     "fixed-icon",
-                    "down-icon"
+                    "down-icon",
                   );
                   hotSpotDiv.appendChild(prevIcon);
                   const prevText = document.createElement("span");
@@ -355,42 +470,62 @@ const PannellumViewer = ({
             sharedViewState?.yaw !== undefined
               ? sharedViewState.yaw
               : savedViewPosition
-              ? savedViewPosition.yaw
-              : selectedImage.properties.initialYaw || 0;
+                ? savedViewPosition.yaw
+                : selectedImage.properties.initialYaw || 0;
 
           const initialPitch =
             sharedViewState?.pitch !== undefined
               ? sharedViewState.pitch
               : savedViewPosition
-              ? savedViewPosition.pitch
-              : selectedImage.properties.initialPitch || 0;
+                ? savedViewPosition.pitch
+                : selectedImage.properties.initialPitch || 0;
 
           const initialHfov =
             sharedViewState?.hfov !== undefined
               ? sharedViewState.hfov
               : savedViewPosition
-              ? savedViewPosition.hfov
-              : selectedImage.properties.initialHfov || 100;
+                ? savedViewPosition.hfov
+                : selectedImage.properties.initialHfov || 100;
 
-          let imageUrl;
+          // Get the drive URL and direct fallback URL
+          const driveUrl = isHDMode
+            ? selectedImage.properties.driveUrl_High
+            : selectedImage.properties.driveUrl_Comp;
+
+          const directUrl = isHDMode
+            ? selectedImage.properties.imageUrl_High ||
+              selectedImage.properties.imageUrl
+            : selectedImage.properties.imageUrl_Comp ||
+              selectedImage.properties.imageUrl;
+
+          // Process the drive URL through proxy if it's a Google Drive URL
+          const processedDriveUrl = driveUrl ? processImageUrl(driveUrl) : null;
+
+          // Determine which URL to use with fallback mechanism
+          let finalUrl;
           if (
-            selectedImage.properties.imageUrl_High &&
-            selectedImage.properties.imageUrl_Comp
+            processedDriveUrl &&
+            directUrl &&
+            processedDriveUrl !== directUrl
           ) {
-            imageUrl = isHDMode
-              ? selectedImage.properties.imageUrl_High
-              : selectedImage.properties.imageUrl_Comp;
+            // Try drive URL first, fallback to direct URL on failure
+            setIsLoading(true);
+            finalUrl = await fetchImageWithFallback(
+              processedDriveUrl,
+              directUrl,
+            );
+            setIsLoading(false);
           } else {
-            imageUrl = isHDMode
-              ? selectedImage.properties.imageUrl_High ||
-                selectedImage.properties.imageUrl
-              : selectedImage.properties.imageUrl_Comp ||
-                selectedImage.properties.imageUrl;
+            // Use whichever URL is available
+            finalUrl = processedDriveUrl || directUrl || "";
           }
+
+          // Store the final URL for reference
+          setCurrentImageUrl(finalUrl);
 
           const viewer = window.pannellum.viewer(viewerRef.current.id, {
             type: "equirectangular",
-            panorama: imageUrl,
+            panorama: finalUrl,
             autoLoad: true,
             showControls: true,
             compass: selectedImage.properties.showCompass || true,
@@ -528,7 +663,7 @@ const PannellumViewer = ({
             <div className='vertical-nav-buttons'>
               {(selectedImage.properties.driveUrl_Comp ||
                 images.findIndex(
-                  (img) => img.properties.id === selectedImage?.properties.id
+                  (img) => img.properties.id === selectedImage?.properties.id,
                 ) <
                   images.length - 1) && (
                 <button
@@ -557,10 +692,10 @@ const PannellumViewer = ({
               {((selectedImage.properties.driveUrl_Comp &&
                 selectedImage.properties.id &&
                 String(
-                  selectedImage.properties.id || selectedImage.properties.id
+                  selectedImage.properties.id || selectedImage.properties.id,
                 ).match(/\d+_(\d+)/)?.[1] > 0) ||
                 images.findIndex(
-                  (img) => img.properties.id === selectedImage?.properties.id
+                  (img) => img.properties.id === selectedImage?.properties.id,
                 ) > 0) && (
                 <button
                   className='nav-btn prev-btn'
