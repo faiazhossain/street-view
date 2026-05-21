@@ -58,9 +58,9 @@ const MapSearchBar = ({ onLocationSelect, className }) => {
     setLoading(true);
     try {
       const response = await fetch(
-        `https://barikoi.xyz/v2/api/search/autocomplete/place?api_key=NDE2NzpVNzkyTE5UMUoy&q=${encodeURIComponent(
-          value
-        )}&sub_area=true&sub_district=true`
+        `https://barikoi.xyz/v2/api/search/autocomplete/place?api_key=bkoi_ed6171d88adc261e0a937a5649999a16fcbd8808c16f7fa08a9634cb6c41b944&q=${encodeURIComponent(
+          value,
+        )}&sub_area=true&sub_district=true`,
       );
       const data = await response.json();
 

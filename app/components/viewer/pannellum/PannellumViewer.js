@@ -18,7 +18,7 @@ let scriptLoadedGlobal = false;
 // Timeout for drive URL fetch (in milliseconds)
 const DRIVE_URL_TIMEOUT = 8000;
 
-// Helper function to proxy Google Drive URLs through our API
+// Helper function to proxy external image URLs through our API
 const processImageUrl = (url) => {
   if (!url) return "";
 
@@ -28,9 +28,19 @@ const processImageUrl = (url) => {
     const match = url.match(/[?&]id=([^&]+)/);
     if (match && match[1]) {
       const fileId = match[1];
-      // Return proxied URL through our API
+      // Return proxied URL through drive proxy API
       return `/api/drive-proxy?id=${fileId}`;
     }
+  }
+
+  // Proxy R2.dev URLs through image proxy API
+  if (url.includes("r2.dev")) {
+    return `/api/image-proxy?url=${encodeURIComponent(url)}`;
+  }
+
+  // Proxy streetview.bmapsbd.com image URLs through image proxy API
+  if (url.includes("streetview.bmapsbd.com") && url.match(/\.(jpg|jpeg|png|webp)/i)) {
+    return `/api/image-proxy?url=${encodeURIComponent(url)}`;
   }
 
   // Return the URL as-is for other cases
@@ -215,17 +225,18 @@ const PannellumViewer = ({
       : selectedImage.properties.imageUrl_Comp ||
         selectedImage.properties.imageUrl;
 
-    // Process the drive URL through proxy if it's a Google Drive URL
+    // Process both URLs through proxy where needed
     const processedDriveUrl = driveUrl ? processImageUrl(driveUrl) : null;
+    const processedDirectUrl = directUrl ? processImageUrl(directUrl) : null;
 
     // Determine which URL to use with fallback mechanism
     let imageUrl;
-    if (processedDriveUrl && directUrl && processedDriveUrl !== directUrl) {
+    if (processedDriveUrl && processedDirectUrl && processedDriveUrl !== processedDirectUrl) {
       // Try drive URL first, fallback to direct URL on failure
-      imageUrl = await fetchImageWithFallback(processedDriveUrl, directUrl);
+      imageUrl = await fetchImageWithFallback(processedDriveUrl, processedDirectUrl);
     } else {
       // Use whichever URL is available
-      imageUrl = processedDriveUrl || directUrl || "";
+      imageUrl = processedDriveUrl || processedDirectUrl || "";
     }
 
     if (!imageUrl) {
@@ -498,26 +509,27 @@ const PannellumViewer = ({
             : selectedImage.properties.imageUrl_Comp ||
               selectedImage.properties.imageUrl;
 
-          // Process the drive URL through proxy if it's a Google Drive URL
+          // Process both URLs through proxy where needed
           const processedDriveUrl = driveUrl ? processImageUrl(driveUrl) : null;
+          const processedDirectUrl = directUrl ? processImageUrl(directUrl) : null;
 
           // Determine which URL to use with fallback mechanism
           let finalUrl;
           if (
             processedDriveUrl &&
-            directUrl &&
-            processedDriveUrl !== directUrl
+            processedDirectUrl &&
+            processedDriveUrl !== processedDirectUrl
           ) {
             // Try drive URL first, fallback to direct URL on failure
             setIsLoading(true);
             finalUrl = await fetchImageWithFallback(
               processedDriveUrl,
-              directUrl,
+              processedDirectUrl,
             );
             setIsLoading(false);
           } else {
             // Use whichever URL is available
-            finalUrl = processedDriveUrl || directUrl || "";
+            finalUrl = processedDriveUrl || processedDirectUrl || "";
           }
 
           // Store the final URL for reference

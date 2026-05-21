@@ -89,7 +89,7 @@ const MapComponent = ({
   // State for delete mode
   const [deleteMode, setDeleteMode] = useState(false);
   const [selectedPointsForDeletion, setSelectedPointsForDeletion] = useState(
-    []
+    [],
   );
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeletingPoints, setIsDeletingPoints] = useState(false);
@@ -120,7 +120,7 @@ const MapComponent = ({
       // Fall back to original coordinates
       return feature.geometry.coordinates;
     },
-    [useSnappedCoordinates]
+    [useSnappedCoordinates],
   );
 
   // Memoized feature collections for each track to avoid expensive recalculation
@@ -276,14 +276,14 @@ const MapComponent = ({
             "Content-Type": "application/json",
           },
           body: JSON.stringify(payload),
-        }
+        },
       );
 
       if (!response.ok) {
         const errorText = await response.text();
         console.error("API Error Response:", errorText);
         throw new Error(
-          errorText || `Update failed with status ${response.status}`
+          errorText || `Update failed with status ${response.status}`,
         );
       }
 
@@ -293,9 +293,9 @@ const MapComponent = ({
       // Show success toast
       toast.success(
         `Coordinates updated for Feature ${featureId}\nLat: ${latitude.toFixed(
-          6
+          6,
         )}, Lng: ${longitude.toFixed(6)}`,
-        { duration: 4000 }
+        { duration: 4000 },
       );
 
       // Refresh data if available
@@ -343,7 +343,7 @@ const MapComponent = ({
   // Remove point from deletion selection
   const removePointFromDeletion = (pointId) => {
     setSelectedPointsForDeletion((prev) =>
-      prev.filter((p) => p.id !== pointId)
+      prev.filter((p) => p.id !== pointId),
     );
   };
 
@@ -361,7 +361,7 @@ const MapComponent = ({
           body: JSON.stringify({
             feature_ids: pointIds,
           }),
-        }
+        },
       );
 
       if (!response.ok) {
@@ -449,8 +449,8 @@ const MapComponent = ({
   const mapStyle =
     customMapStyle ||
     (darkMode
-      ? "https://map.barikoi.com/styles/barikoi-dark-mode/style.json?key=NDE2NzpVNzkyTE5UMUoy"
-      : "https://map.barikoi.com/styles/osm_barikoi_v2/style.json?key=NDE2NzpVNzkyTE5UMUoy");
+      ? "https://map.barikoi.com/styles/barikoi-dark-mode/style.json?key=bkoi_ed6171d88adc261e0a937a5649999a16fcbd8808c16f7fa08a9634cb6c41b944"
+      : "https://map.barikoi.com/styles/osm_barikoi_v2/style.json?key=bkoi_ed6171d88adc261e0a937a5649999a16fcbd8808c16f7fa08a9634cb6c41b944");
 
   // Initialize view state from initialViewState (if provided) or from the first feature in the data
   const [viewState, setViewState] = useState(
@@ -462,7 +462,7 @@ const MapComponent = ({
       zoom: 14,
       pitch: 0,
       bearing: 0,
-    }
+    },
   );
 
   // Update the view state when the image data changes
@@ -492,7 +492,7 @@ const MapComponent = ({
       const foundInFeatures = imageData?.features?.find(
         (feature) =>
           feature.properties.id === selectedImageId ||
-          feature.properties.id === selectedImageId
+          feature.properties.id === selectedImageId,
       );
 
       if (foundInFeatures) {
@@ -575,7 +575,7 @@ const MapComponent = ({
               if (editMode) {
                 console.log(
                   "Selected feature for editing:",
-                  feature.properties
+                  feature.properties,
                 );
                 setEditingPoint({
                   properties: feature.properties,
@@ -616,14 +616,23 @@ const MapComponent = ({
         console.error("Error handling map click:", error);
       }
     },
-    [onImageSelect, trackGroups, poiMode, poiSearchRadius, deleteMode, editMode, polygonDeleteMode, addPolygonPoint]
+    [
+      onImageSelect,
+      trackGroups,
+      poiMode,
+      poiSearchRadius,
+      deleteMode,
+      editMode,
+      polygonDeleteMode,
+      addPolygonPoint,
+    ],
   );
 
   // Handle copying coordinates to clipboard
   const handleCopyCoords = useCallback(() => {
     if (rightClickCoords) {
       const coordsText = `${rightClickCoords.lat.toFixed(
-        6
+        6,
       )}, ${rightClickCoords.lng.toFixed(6)}`;
       navigator.clipboard
         .writeText(coordsText)
@@ -786,8 +795,8 @@ const MapComponent = ({
           <>
             {/* Polygon fill */}
             <Source
-              id="polygon-delete-fill"
-              type="geojson"
+              id='polygon-delete-fill'
+              type='geojson'
               data={{
                 type: "Feature",
                 properties: {},
@@ -802,8 +811,8 @@ const MapComponent = ({
               }}
             >
               <Layer
-                id="polygon-fill-layer"
-                type="fill"
+                id='polygon-fill-layer'
+                type='fill'
                 paint={{
                   "fill-color": "#ef4444",
                   "fill-opacity": 0.15,
@@ -813,8 +822,8 @@ const MapComponent = ({
 
             {/* Polygon outline */}
             <Source
-              id="polygon-delete-outline"
-              type="geojson"
+              id='polygon-delete-outline'
+              type='geojson'
               data={{
                 type: "Feature",
                 properties: {},
@@ -828,8 +837,8 @@ const MapComponent = ({
               }}
             >
               <Layer
-                id="polygon-outline-layer"
-                type="line"
+                id='polygon-outline-layer'
+                type='line'
                 paint={{
                   "line-color": "#ef4444",
                   "line-width": 2,
@@ -840,8 +849,8 @@ const MapComponent = ({
 
             {/* Polygon vertices */}
             <Source
-              id="polygon-vertices"
-              type="geojson"
+              id='polygon-vertices'
+              type='geojson'
               data={{
                 type: "FeatureCollection",
                 features: polygonPoints.map((coord, idx) => ({
@@ -855,8 +864,8 @@ const MapComponent = ({
               }}
             >
               <Layer
-                id="polygon-vertices-layer"
-                type="circle"
+                id='polygon-vertices-layer'
+                type='circle'
                 paint={{
                   "circle-radius": 6,
                   "circle-color": "#ef4444",
@@ -866,8 +875,8 @@ const MapComponent = ({
               />
               {polygonPoints.length >= 1 && (
                 <Layer
-                  id="polygon-vertices-labels"
-                  type="symbol"
+                  id='polygon-vertices-labels'
+                  type='symbol'
                   layout={{
                     "text-field": ["get", "index"],
                     "text-offset": [0, 0],
@@ -973,7 +982,7 @@ const MapComponent = ({
               .filter(
                 (feature) =>
                   feature.properties.id === selectedImageId ||
-                  feature.properties.id === selectedImageId
+                  feature.properties.id === selectedImageId,
               )
               .map((feature) => {
                 // For selected marker, adjust coordinates based on toggle
@@ -1002,7 +1011,7 @@ const MapComponent = ({
               !imageData.features.find(
                 (f) =>
                   f.properties.id === selectedImageId ||
-                  f.properties.id === selectedImageId
+                  f.properties.id === selectedImageId,
               ) && (
                 <SelectedMarker
                   key={`selected-${selectedFeature.properties.id}`}
@@ -1175,7 +1184,7 @@ const MapComponent = ({
               updateCoordinates(
                 editingPoint.properties.id,
                 lngLat.lat,
-                lngLat.lng
+                lngLat.lng,
               );
             }}
           >
@@ -1507,17 +1516,20 @@ const MapComponent = ({
             {polygonDeleteMode
               ? "Polygon Delete Mode: Click on the map to draw a polygon area. At least 3 points needed."
               : editMode
-              ? "Edit Mode: Click on a green point to select it, then drag the marker to update its coordinates."
-              : deleteMode
-              ? "Delete Mode: Click on green points to select them for deletion. Use PIN 2017 to confirm."
-              : poiMode
-              ? "POI Mode: Click anywhere on the map to find nearby points of interest."
-              : "Click on any green point to view the street image at that location."}
+                ? "Edit Mode: Click on a green point to select it, then drag the marker to update its coordinates."
+                : deleteMode
+                  ? "Delete Mode: Click on green points to select them for deletion. Use PIN 2017 to confirm."
+                  : poiMode
+                    ? "POI Mode: Click anywhere on the map to find nearby points of interest."
+                    : "Click on any green point to view the street image at that location."}
           </p>
           {polygonDeleteMode && polygonPoints.length > 0 && (
             <p className='text-xs mt-1 text-rose-600'>
-              {polygonPoints.length} point{polygonPoints.length > 1 ? "s" : ""} drawn.
-              {polygonPoints.length >= 3 ? " Ready to preview." : ` Need ${3 - polygonPoints.length} more.`}
+              {polygonPoints.length} point{polygonPoints.length > 1 ? "s" : ""}{" "}
+              drawn.
+              {polygonPoints.length >= 3
+                ? " Ready to preview."
+                : ` Need ${3 - polygonPoints.length} more.`}
             </p>
           )}
           {editMode && editingPoint && (
