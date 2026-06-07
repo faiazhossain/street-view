@@ -1,0 +1,269 @@
+/* Hotspot styles for the panorama viewer */
+
+.custom-hotspot {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.5);
+  color: white;
+  cursor: pointer;
+  position: absolute;
+  margin-top: 160px;
+  backdrop-filter: blur(4px);
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.custom-hotspot:hover {
+  background: rgba(48, 79, 254, 0.8);
+  transform: scale(1.15);
+  border-color: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4), 0 0 15px rgba(48, 79, 254, 0.6);
+}
+
+.hotspot-icon {
+  font-size: 32px;
+  font-weight: bold;
+}
+
+.hotspot-icon svg {
+  width: 32px;
+  height: 32px;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.3));
+}
+
+.hotspot-text {
+  position: absolute;
+  bottom: -22px;
+  white-space: nowrap;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 4px 8px;
+  border-radius: 4px;
+  opacity: 1; /* Always show the text */
+  font-weight: bold;
+  font-size: 11px;
+  text-align: center;
+  left: 50%;
+  transform: translateX(-50%);
+  letter-spacing: 1px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.custom-hotspot:hover .hotspot-text {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.8);
+  transform: translateX(-50%) scale(1.1);
+}
+
+/* Ensure pannellum positions the hotspots properly */
+.pnlm-hotspot {
+  transition: none;
+  transform-style: preserve-3d;
+}
+
+.next-hotspot {
+  /* Styling for next button */
+  background: rgba(66, 133, 244, 0.7);
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  transform-origin: center center;
+}
+
+.next-hotspot:hover {
+  background: rgba(66, 133, 244, 0.9);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4), 0 0 15px rgba(66, 133, 244, 0.6);
+}
+
+.prev-hotspot {
+  /* Styling for prev button */
+  background: rgba(52, 168, 83, 0.7);
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  transform-origin: center center;
+}
+
+.prev-hotspot:hover {
+  background: rgba(52, 168, 83, 0.9);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4), 0 0 15px rgba(52, 168, 83, 0.6);
+}
+
+/* Ensure hotspots are always visible regardless of view angle */
+.pnlm-container .pnlm-hotspot {
+  opacity: 1 !important;
+}
+
+/* Fixed navigation controls */
+.fixed-nav-controls {
+  position: absolute;
+  right: 30px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  z-index: 100;
+  pointer-events: auto;
+}
+
+.vertical-nav-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.nav-btn {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  border: 3px solid rgba(255, 255, 255, 0.8);
+  position: relative;
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+}
+
+.nav-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-text {
+  font-size: 13px;
+  font-weight: bold;
+  margin-top: 4px;
+  color: white;
+  text-shadow: 0 0 8px rgba(0, 0, 0, 0.7), 0 2px 4px rgba(0, 0, 0, 0.5);
+  letter-spacing: 1px;
+}
+
+.prev-btn {
+  background: rgba(52, 168, 83, 0.8);
+}
+
+.prev-btn:hover {
+  background: rgba(52, 168, 83, 0.95);
+  transform: scale(1.1) translateY(-5px);
+  box-shadow: 0 12px 25px rgba(0, 0, 0, 0.25), 0 0 20px rgba(52, 168, 83, 0.4);
+  border-color: rgba(255, 255, 255, 1);
+}
+
+.next-btn {
+  background: rgba(66, 133, 244, 0.8);
+}
+
+.next-btn:hover {
+  background: rgba(66, 133, 244, 0.95);
+  transform: scale(1.1) translateY(-5px);
+  box-shadow: 0 12px 25px rgba(0, 0, 0, 0.25), 0 0 20px rgba(66, 133, 244, 0.4);
+  border-color: rgba(255, 255, 255, 1);
+}
+
+.nav-arrow {
+  width: 24px;
+  height: 24px;
+  transition: transform 0.3s ease;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.3));
+}
+
+.down-arrow {
+  transform: rotate(180deg);
+}
+
+/* Hotspot icons should remain fixed */
+.fixed-icon {
+  transform: none !important; /* Prevent any transform from happening */
+  transition: none !important; /* Disable transitions */
+}
+
+/* Icon for previous button (pointing down) */
+.down-icon {
+  transform: rotate(180deg) !important; /* Always point down */
+}
+
+/* Make sure the hotspot content doesn't rotate */
+.custom-tooltip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.pnlm-hotspot .custom-tooltip {
+  transform: none !important;
+}
+
+/* HD Toggle Button Styling */
+.hd-toggle-container {
+  position: absolute;
+  bottom: 80px;
+  right: 16px;
+  display: flex;
+  justify-content: center;
+  z-index: 100;
+}
+
+.hd-toggle-btn {
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  border-radius: 100px;
+  padding: 16px 8px;
+  font-size: 13px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.hd-toggle-btn:hover {
+  background: rgba(0, 0, 0, 0.9);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+}
+
+.hd-toggle-btn.active {
+  background: linear-gradient(
+    135deg,
+    rgba(64, 255, 0, 0.8),
+    rgba(0, 255, 42, 0.754)
+  );
+  border-color: rgba(255, 255, 255, 1);
+}
+
+.hd-toggle-btn.active:hover {
+  background: linear-gradient(
+    135deg,
+    rgba(94, 255, 0, 0.9),
+    rgba(0, 255, 42, 0.9)
+  );
+}
+
+.hd-toggle-btn::before {
+  content: "";
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 6px;
+  background: rgba(255, 255, 255, 0.6);
+  box-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+  transition: all 0.2s ease;
+}
+
+.hd-toggle-btn.active::before {
+  background: #ffffff;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
+}

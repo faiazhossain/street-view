@@ -1,0 +1,2 @@
+docker buildx build --platform linux/amd64,linux/arm64 -t rilusmahmud/street-view-dashboard:main-1.0.12 .
+
