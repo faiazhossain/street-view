@@ -17,7 +17,8 @@ import {
   FaMapMarkerAlt,
 } from "react-icons/fa";
 
-const API_BASE_URL = "https://streetview.bmapsbd.com/api/api";
+// Use environment variable for API base URL
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://192.168.10.105:8001';
 
 const PolygonDeletePanel = ({
   isOpen,

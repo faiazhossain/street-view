@@ -269,8 +269,9 @@ const PannellumViewer = ({
         requestBody.feature_id = selectedImage.properties.id;
       }
 
+      const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://192.168.10.105:8001';
       const response = await fetch(
-        "https://streetview.bmapsbd.com/api/api/generate-poi",
+        `${backendUrl}/api/generate-poi`,
         {
           method: "POST",
           headers: {
@@ -314,8 +315,9 @@ const PannellumViewer = ({
 
     setIsFetchingPoi(true);
     try {
+      const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://192.168.10.105:8001';
       const response = await fetch(
-        `https://streetview.bmapsbd.com/api/api/point-of-interest?lat=${selectedImage.properties.latitude_snapped}&lon=${selectedImage.properties.longitude_snapped}&rad=5`,
+        `${backendUrl}/api/point-of-interest?lat=${selectedImage.properties.latitude_snapped}&lon=${selectedImage.properties.longitude_snapped}&rad=5`,
       );
       const data = await response.json();
 
@@ -701,7 +703,8 @@ const PannellumViewer = ({
                 </button>
               )}
 
-              {((selectedImage.properties.driveUrl_Comp &&
+              {((selectedImage.properties.r2Url_Comp ||  // Check R2 URL first
+                selectedImage.properties.imageUrl_Comp ||  // Fallback to image URL
                 selectedImage.properties.id &&
                 String(
                   selectedImage.properties.id || selectedImage.properties.id,

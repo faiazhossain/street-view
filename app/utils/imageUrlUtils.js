@@ -11,7 +11,11 @@ export const getApiBaseUrl = () => {
   if (typeof window !== 'undefined') {
     // Client-side: use environment or default
     return process.env.NEXT_PUBLIC_API_BASE_URL ||
-           (window.location.hostname === 'localhost' ? 'http://localhost:8001' : 'https://streetview.bmapsbd.com/api/api');
+           (window.location.hostname === 'localhost' ||
+            window.location.hostname === '127.0.0.1' ||
+            window.location.hostname.startsWith('192.168.') ?  // Local network IPs like 192.168.10.105
+             'http://localhost:8001'
+             : 'https://streetview.bmapsbd.com/api/api');
   }
   // Server-side: use localhost
   return 'http://localhost:8001';

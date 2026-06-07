@@ -268,8 +268,9 @@ const MapComponent = ({
 
       console.log("Updating coordinates with payload:", payload);
 
+      const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://192.168.10.105:8001';
       const response = await fetch(
-        "https://streetview.bmapsbd.com/api/api/update-snapped-coordinates",
+        `${backendUrl}/api/update-snapped-coordinates`,
         {
           method: "POST",
           headers: {
@@ -351,8 +352,9 @@ const MapComponent = ({
   const handleDeleteConfirm = async (pointIds) => {
     setIsDeletingPoints(true);
     try {
+      const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://192.168.10.105:8001';
       const response = await fetch(
-        "https://streetview.bmapsbd.com/api/api/features/delete-batch",
+        `${backendUrl}/api/features/delete-batch`,
         {
           method: "DELETE",
           headers: {

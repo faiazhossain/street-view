@@ -30,10 +30,8 @@ export async function GET(request) {
       data = JSON.parse(fileContent);
     } catch (err) {
       // Local cache file not found or invalid, fetching from API
-      // Use local backend for development, production for deployment
-      const backendUrl = process.env.NODE_ENV === 'development'
-        ? 'http://localhost:8001'
-        : 'https://streetview.bmapsbd.com/api/api';
+      // Use environment variable for backend URL
+      const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://192.168.10.105:8001';
 
       const response = await fetch(
         `${backendUrl}/api/features/`,

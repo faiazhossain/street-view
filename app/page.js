@@ -208,10 +208,8 @@ function HomeContent() {
 
     setIsLoadingFeature(true);
     try {
-      // Use local backend for development, production for deployment
-      const backendUrl = process.env.NODE_ENV === 'development'
-        ? 'http://localhost:8001'
-        : 'https://streetview.bmapsbd.com/api/api';
+      // Use environment variable for backend URL
+      const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://192.168.10.105:8001';
 
       const response = await fetch(
         `${backendUrl}/api/features/${featureId}`
@@ -276,7 +274,7 @@ function HomeContent() {
       console.warn("Falling back to manual URL construction for next image");
 
       // Create the base URL based on the current track
-      const baseUrl = `https://streetview.bmapsbd.com/api/track${trackNumber}/`;
+      const baseUrl = `http://192.168.10.105:8001/api/r2-proxy/track${trackNumber}/`;
 
       const fallbackImageData = {
         ...selectedImageData,
@@ -333,7 +331,7 @@ function HomeContent() {
       );
 
       // Create the base URL based on the current track
-      const baseUrl = `https://streetview.bmapsbd.com/api/track${trackNumber}/`;
+      const baseUrl = `http://192.168.10.105:8001/api/r2-proxy/track${trackNumber}/`;
 
       const fallbackImageData = {
         ...selectedImageData,
