@@ -54,7 +54,7 @@ function HomeContent() {
       // Update URL without page reload
       router.replace(`?${params.toString()}`, { scroll: false });
     },
-    [router]
+    [router],
   );
 
   // Update URL when image changes (but not on initial shared link load)
@@ -209,11 +209,10 @@ function HomeContent() {
     setIsLoadingFeature(true);
     try {
       // Use environment variable for backend URL
-      const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://192.168.10.105:8001';
+      const backendUrl =
+        process.env.NEXT_PUBLIC_API_URL || "https://streetview.bmapsbd.com/api";
 
-      const response = await fetch(
-        `${backendUrl}/api/features/${featureId}`
-      );
+      const response = await fetch(`${backendUrl}/api/features/${featureId}`);
 
       if (!response.ok) {
         throw new Error(`API response error: ${response.status}`);
@@ -254,7 +253,7 @@ function HomeContent() {
 
     // Extract the current image ID to calculate next image ID
     const { trackNumber, imageNumber } = parseImageId(
-      selectedImageData.id || selectedImageData.id
+      selectedImageData.id || selectedImageData.id,
     );
 
     const nextImageNumber = imageNumber + 1;
@@ -262,7 +261,7 @@ function HomeContent() {
 
     // Fetch the next image data from API
     const nextImageData = await fetchFeatureById(
-      selectedImageData.next_id || nextImageId
+      selectedImageData.next_id || nextImageId,
     );
 
     if (nextImageData) {
@@ -274,7 +273,7 @@ function HomeContent() {
       console.warn("Falling back to manual URL construction for next image");
 
       // Create the base URL based on the current track
-      const baseUrl = `http://192.168.10.105:8001/api/r2-proxy/track${trackNumber}/`;
+      const baseUrl = `https://streetview.bmapsbd.com/api/api/r2-proxy/track${trackNumber}/`;
 
       const fallbackImageData = {
         ...selectedImageData,
@@ -303,7 +302,7 @@ function HomeContent() {
 
     // Extract the current image number from the ID
     const { trackNumber, imageNumber } = parseImageId(
-      selectedImageData.id || selectedImageData.id
+      selectedImageData.id || selectedImageData.id,
     );
     // If we're at image 0, don't go backwards but show some feedback
     if (imageNumber <= 0) {
@@ -317,7 +316,7 @@ function HomeContent() {
     console.log("🚀 ~ Home ~ selectedImageData:", selectedImageData);
     // Fetch the previous image data from API
     const prevImageData = await fetchFeatureById(
-      selectedImageData.previous_id || prevImageId
+      selectedImageData.previous_id || prevImageId,
     );
 
     if (prevImageData) {
@@ -327,11 +326,11 @@ function HomeContent() {
     } else {
       // If API call failed, fall back to constructing URLs manually
       console.warn(
-        "Falling back to manual URL construction for previous image"
+        "Falling back to manual URL construction for previous image",
       );
 
       // Create the base URL based on the current track
-      const baseUrl = `http://192.168.10.105:8001/api/r2-proxy/track${trackNumber}/`;
+      const baseUrl = `https://streetview.bmapsbd.com/api/api/r2-proxy/track${trackNumber}/`;
 
       const fallbackImageData = {
         ...selectedImageData,

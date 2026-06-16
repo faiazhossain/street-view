@@ -153,10 +153,13 @@ const getImageUrl = (properties, isHD) => {
     : properties.imageUrl_Comp || properties.imageUrl;
 
   // For local development, use proxy to avoid CORS issues
-  if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+  if (
+    typeof window !== "undefined" &&
+    window.location.hostname === "localhost"
+  ) {
     // Local development: Use backend proxy
     const featureId = properties.id;
-    const quality = isHD ? 'high' : 'comp';
+    const quality = isHD ? "high" : "comp";
     if (featureId) {
       return getProxiedImageUrl(featureId, quality);
     }
@@ -269,17 +272,15 @@ const PannellumViewer = ({
         requestBody.feature_id = selectedImage.properties.id;
       }
 
-      const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://192.168.10.105:8001';
-      const response = await fetch(
-        `${backendUrl}/api/generate-poi`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(requestBody),
+      const backendUrl =
+        process.env.NEXT_PUBLIC_API_URL || "https://streetview.bmapsbd.com/api";
+      const response = await fetch(`${backendUrl}/api/generate-poi`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-      );
+        body: JSON.stringify(requestBody),
+      });
 
       const data = await response.json();
 
@@ -315,7 +316,8 @@ const PannellumViewer = ({
 
     setIsFetchingPoi(true);
     try {
-      const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://192.168.10.105:8001';
+      const backendUrl =
+        process.env.NEXT_PUBLIC_API_URL || "https://streetview.bmapsbd.com/api";
       const response = await fetch(
         `${backendUrl}/api/point-of-interest?lat=${selectedImage.properties.latitude_snapped}&lon=${selectedImage.properties.longitude_snapped}&rad=5`,
       );
@@ -703,12 +705,12 @@ const PannellumViewer = ({
                 </button>
               )}
 
-              {((selectedImage.properties.r2Url_Comp ||  // Check R2 URL first
-                selectedImage.properties.imageUrl_Comp ||  // Fallback to image URL
-                selectedImage.properties.id &&
-                String(
-                  selectedImage.properties.id || selectedImage.properties.id,
-                ).match(/\d+_(\d+)/)?.[1] > 0) ||
+              {(selectedImage.properties.r2Url_Comp || // Check R2 URL first
+                selectedImage.properties.imageUrl_Comp || // Fallback to image URL
+                (selectedImage.properties.id &&
+                  String(
+                    selectedImage.properties.id || selectedImage.properties.id,
+                  ).match(/\d+_(\d+)/)?.[1] > 0) ||
                 images.findIndex(
                   (img) => img.properties.id === selectedImage?.properties.id,
                 ) > 0) && (

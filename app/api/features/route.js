@@ -31,18 +31,16 @@ export async function GET(request) {
     } catch (err) {
       // Local cache file not found or invalid, fetching from API
       // Use environment variable for backend URL
-      const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://192.168.10.105:8001';
+      const backendUrl =
+        process.env.NEXT_PUBLIC_API_URL || "https://streetview.bmapsbd.com/api";
 
-      const response = await fetch(
-        `${backendUrl}/api/features/`,
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-          // Add cache: 'no-store' to prevent reusing previous response
-          cache: "no-store",
-        }
-      );
+      const response = await fetch(`${backendUrl}/api/features/`, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+        // Add cache: 'no-store' to prevent reusing previous response
+        cache: "no-store",
+      });
 
       if (!response.ok) {
         throw new Error(`API response error: ${response.status}`);
@@ -102,7 +100,7 @@ export async function GET(request) {
     console.error("Error fetching image features:", error);
     return Response.json(
       { error: "Failed to fetch image features", message: error.message },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
